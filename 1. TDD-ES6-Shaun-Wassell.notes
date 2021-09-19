@@ -1,0 +1,556 @@
+# JavaScript: Test-Driven Development (ES6) => Curso de LinkedIn - Shaun Wassell
+1. Para instalar mongodb
+  => https://stackoverflow.com/questions/62495999/installing-mongodb-in-wsl
+
+2. Para instalar mocha y chai
+  => npm --save-dev mocha chai
+
+  Como vamos a usar ES6, debemos instalar babel
+  => npm i --save-dev @babel/core @babel/preset-env @babel/register
+
+# MOCHA
+1. describe
+  => Usamos descibe para agrupar pruebas similares, describe es una funcion que toma 2 argumentos, un titulo que describe lo que hace la prueba y una funcion anonima
+[javascript]
+  import {getLetterCount} from "./letter-count"
+
+  describe("getLetterCount - basic functionality", ()=>{
+  })
+[end]
+
+2. it
+  => Es usado para probar test individuales y al igual que describe recibe 2 parametros, un titulo y una funcion anonima
+
+  => En la funcion anonima ponemos los "assertions" o las afirmaciones que respaldan el titulo del it, es decir, en este caso, retornan un objeto vacio cuando se envia un string vacio
+
+  => Para haces los "assertions" usaremos chai, por lo que lo tenemos que importar
+
+  => Para hacer los assertions, primero damos el resultado esperado y luego comparamos ese valor con lo que devuelve la funcion
+
+[javascript]
+  import {expect} from "chai"
+  import {getLetterCount} from "./letter-count"
+
+  describe("getLetterCount - basic functionality", ()=>{
+    it("returns an empty object when passed an empty string",()=>{
+      const expected = {} //resultado esperado
+      const actual = getLetterCount("")
+      expect(actual).to.deep.equal(expected) // Hacemos la assertion de que lo que nos está devolviendo la funcion es lo que estamos esperando
+    })
+  })
+[end]
+
+# Correr un test
+npx mocha "src/**/*.test.js" --recursive --require @babel/register
+  => Agregamos "--require @babel/register" porque estamos usando la sintaxis de ES6
+
+Para no tener que estar copiando eso en la terminal, podemos crear un script en el "package.json" y ya solo tendriamos que correr npm run test
+[json]
+  "scripts": {
+    "test": "npx mocha \"src/**/*.test.js\" --recursive --require @babel/register"
+  },
+[end]
+
+# Supertest
+Es una libreria que nos permite testear la funcionalidad de un server en Node sin iniciar el servidor lo que nos ahorra mucho tiempo
+
+  => # Probando un endpoint
+    1. El test debe de ser rapido
+      Entonces en muchos casos, vamos a usar test doubles para no perder tiempo, estos serian los ! SINGLE-SERVICE INTEGRATION TESTS !
+
+    2. Queremos algunos test que si se comuniquen con los servicios externos como mongodb para asegurarnos que se comporten como esperamos, estos son los ! BOUNDARY INTEGRATION TESTS !
+
+    Cómo logramos esto en nuestra aplicacion?
+      1. Creamos una especie de "wrapper" alrededor de la base de datos (mongoDB) y nuestro test usara comunicacion con la base de datos de verdad para segurarnos que se comporte como queremos, no usamos "test doubles"
+
+        => Este wrapper va tener funciones como "getUser" o "createUser" y estas funciones realizan alguna operacion con la base de datos
+
+      2. El resto del codigo que creamos, es decir, nuestro servidor, solo puede llamar a la base de datos atraves del "wrapper"
+
+        => Cuando vamos a hacer estos tests, ahora si creamos un "test double" para el "wrapper" el cual nos retornará un valor falso y prueba que el metodo correcto sea llamado con los argumentos adecuados al llamar un endpoint
+
+      EN RESUMEN: Primero probamos la conexion a la DB y cuando sabemos que las operaciones funcionan como queremos, usamos datos falsos cuando necesitamos probar el servidor
+
+  => # Mocha set up
+    Moca no funciona con async/await por defecto, por lo que debemos configurarlo
+      "npm i --save-dev regenerator-runtime"
+
+    Una vez instalado, nos tenemos que asegurar de importar este package al inicio del primer test que corra, sin embargo, esto a veces se nos puede olvidar.
+      => Mocha nos permite especificar archivos que sean corridos antes de cualquier codigo, en este caso creamos un archivo y ahi importamos
+[javascript]
+// mocha-setup.js
+import "regenerator-runtime/runtime";
+[end]
+      => Le decimos a mocha, que corra este archivo antes que cualquier otro, y lo hacemos en nuestro script de test
+      "test": "npx mocha \"src/**/*.test.js\" --recursive --require @babel/register --file src/mocha-setup.js"
+
+  => # Primer Wrapper
+  Miremos un ejemplo de como sería un wrapper para la opcion de recuperar la info de un usuario de la base de datos
+[javascript]
+  // db.test.js
+  import {expect} from "chai"
+  import {getUserByUsername} from "./db" // importamos la función que se encargará de traer los datos
+
+  describe("getUserByUsername",()=>{
+    it("get the correct user from the database given a username", async ()=>{
+
+      => Debemos pensar como asegurar que la funcion "getUserByUsername" haga lo esperado
+        => Una buena manera de probar las bases de datos es:
+          1. Empezar con una base de datos vacía
+          2. Agregarle data que necesitemos
+          3. Correr nuestra funcion, en este caso "getUserByUsername" y analizar si devuelve lo esperado
+          4. Checkear el estado de la base de datos, que no hallamos generado ningún error con el paso 3
+    })
+  })
+[end]
+
+[javascript]
+  // db.test.js
+  import {expect} from "chai"
+  import {getUserByUsername} from "./db" // importamos la función que se encargará de traer los datos
+  import {MongoClient} from "mongodb"
+
+  describe("getUserByUsername",()=>{
+    it("get the correct user from the database given a username", async ()=>{
+      const client = await MongoClient.connect(
+        "mongodb://localhost:27017/TEST_DB",
+      {
+        useNewUrlParser: true,
+        useUnifiedTopology:true,
+      })
+
+      const db = client.db("TEST_DB")
+      //tests
+      client.close()
+
+    })
+  })
+[end]
+
+  Ahora vamos a agregar el fakeData a nuestra base de datos y revisar que esta data se pueda recuperar y que al hacerlo no modifiquemos la base de datos
+
+[javascript]
+  // db.test.js
+  import {expect} from "chai"
+  import {getUserByUsername} from "./db"
+  import {MongoClient} from "mongodb"
+
+  describe("getUserByUsername",()=>{
+    it("get the correct user from the database given a username", async ()=>{
+      const client = await MongoClient.connect(
+        "mongodb://localhost:27017/TEST_DB",
+      {
+        useNewUrlParser: true,
+        useUnifiedTopology:true,
+      })
+
+      const db = client.db("TEST_DB")
+
+      const fakeData = [{
+        id: "123",
+        username: "abc",
+        email: "abc@gmail.com"
+      },{
+        id: "123",
+        username: "wrong",
+        email: "wrong@gmail.com"
+      }]
+
+      // Agregamos la data a la base de datos
+      await db.collection("users").insertMany(fakeData)
+
+      // Buscamos el usuario "abc"
+      const actual = await getUserByUsername("abc")
+
+      // Toda la base de datos la llevamos a un array y esto lo comparamos con el fakeData que es el estado de la base de datos original
+      const finalDbState = await db.collection("users").find().toArray()
+
+      // Reseteamos la base de datos
+      await db.dropDatabase()
+      client.close()
+
+      const expected = {
+        id: "123",
+        username: "abc",
+        email: "abc@gmail.com"
+      }
+
+      expect(actual).to.deep.equal(expected)
+      expect(finalDbState).to.deep.equal(fakeData)
+
+
+    })
+  })
+[end]
+
+  El codigo del dropDatabase y client.close() debe estar antes de las aserciones porque si estas llegasen a fallar no se ejecutarian estas lineas de codigo y esto puede generar problemas con la base de datos
+
+  => Al correr el codigo anterior, obviamente fallará porque aun no hemos creado la funcion "getUserByUsername" por lo que debemos implementarla
+
+[javascript]
+  // db.js
+  import {MongoClient} from "mongodb"
+
+  export const getUserByUsername = async (username)=>{
+    const client = await MongoClient.connect(
+      "mongodb://localhost:27017/TEST_DB",
+      {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+      }
+    );
+
+    const db = client.db("TEST_DB");
+
+    const result = await db.collection("users").findOne({username})
+
+    client.close();
+
+    return result
+  }
+[end]
+
+  => Nuestro test va fallar, porque al crear registros en mongo, se le asigna un "_id" por defecto y no podemos saber cuál será antes de que mongo lo asigne, por lo que usaremos un paquete para excluir este valor al hacer la asercion
+
+  "npm i --save-dev chai-exclude"
+
+[javascript]
+//mocha.setup.js
+import "regenerator-runtime/runtime";
+
+import chai from "chai"
+import chaiExclude from "chai-exclude"
+chai.use(chaiExclude)
+[end]
+
+  => Con esto ya podriamos modificar las aserciones que hacemos en nuestros test excluyendo el campo de "_id"
+
+  expect(actual).excludingEvery("_id").to.deep.equal(expected)
+  expect(finalDbState).excludingEvery("_id").to.deep.equal(fakeData)
+
+  => Una buena práctica es usar variables de entorno para evitar usar el nombre de la base de datos al momento de programar "mongodb://localhost:27017/TEST_DB", para hacer esto agregamos al script que corre los test lo siguiente "NODE_ENV=test"
+
+  "NODE_ENV=test npx mocha \"src/**/*.test.js\" --recursive --require @babel/register --file src/mocha-setup.js"
+
+  Ahora en el archivo de nuestra base de datos creamos una variable que de acuerdo al valor que tenga usara la base de datos de produccion o de desarrollo
+
+[javascript]
+import { MongoClient } from "mongodb";
+
+const DB_NAME = process.env.NODE_ENV === "test" ? "TEST_DB" : "PROD_DB";
+
+export const getUserByUsername = async (username) => {
+  const client = await MongoClient.connect(
+    `mongodb://localhost:27017/${DB_NAME}`,
+    {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    }
+  );
+
+  const db = client.db(DB_NAME);
+  const result = await db.collection("users").findOne({ username });
+  client.close();
+  return result;
+};
+[end]
+
+=> Una buena practica es separar la funcionalidad de conectarse a la base de datos, agregar data y dropear la base de datos en otras funciones separadas para no llenar los test con codigo extra que no aporta a la logica del test
+[javascript]
+  // test-helpers.js
+  import { MongoClient } from "mongodb";
+  export const setDatabaseData = async (collectionName, data) => {
+    const client = await MongoClient.connect(
+      `mongodb://localhost:27017/TEST_DB`,
+      {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+      }
+    );
+
+    const db = client.db("TEST_DB");
+    await db.collection(collectionName).insertMany(data);
+    client.close();
+  };
+
+  export const getDatabaseData = async (collectionName) => {
+    const client = await MongoClient.connect(
+      `mongodb://localhost:27017/TEST_DB`,
+      {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+      }
+    );
+
+    const db = client.db("TEST_DB");
+    const result = await db.collection(collectionName).find().toArray();
+    client.close();
+    return result;
+  };
+
+  export const resetDatabase = async () => {
+    const client = await MongoClient.connect(
+      `mongodb://localhost:27017/TEST_DB`,
+      {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+      }
+    );
+
+    const db = client.db("TEST_DB");
+    await db.dropDatabase();
+    client.close();
+  };
+[end]
+
+  => Ahora estos helpers los podemos usar en nuestros tests y asi dejar el codigo más limpio, con la lógica que de verdad prueba que se realice lo que queremos y no con el setup del DB
+
+[javascript]
+  import { expect } from "chai";
+  import { getUserByUsername } from "./db";
+  import {
+    getDatabaseData,
+    resetDatabase,
+    setDatabaseData,
+  } from "./test-helpers";
+
+  describe("getUserByUsername", () => {
+    it("get the correct user from the database given a username", async () => {
+      const fakeData = [
+        {
+          id: "123",
+          username: "abc",
+          email: "abc@gmail.com",
+        },
+        {
+          id: "123",
+          username: "wrong",
+          email: "wrong@gmail.com",
+        },
+      ];
+
+      await setDatabaseData("users", fakeData);
+      const actual = await getUserByUsername("abc");
+      const finalDbState = await getDatabaseData("users");
+      await resetDatabase();
+
+      const expected = {
+        id: "123",
+        username: "abc",
+        email: "abc@gmail.com",
+      };
+
+      expect(actual).excludingEvery("_id").to.deep.equal(expected);
+      expect(finalDbState).excludingEvery("_id").to.deep.equal(fakeData);
+    });
+  });
+[end]
+
+=> El setup de una base de datos en un test de integracion no debería nunca afectar otro test, por esto secciones del código como resetear la base de datos se hacen muy importante.
+
+  => En nuestro caso, la funcion resetDatabase, es muy importante y si nos olvidaramos llamarla en algun otro test podríamos dejar datos en la base de datos que influirian en otras pruebas y esto generaría errores
+
+  => Para esto podemos usar un "afterEach" hook que nos provee mocha, que nos permite correr codigo despues de cada test en un bloque de codigo, sería algo así:
+
+[javascript]
+  // db.test.js
+  import {expect} from "chai"
+  import {getUserByUsername} from "./db"
+  import {MongoClient} from "mongodb"
+
+  describe("getUserByUsername",()=>{
+    afterEach("reset the database",async()=>{
+      await resetDatabase
+    })
+
+    it("get the correct user from the database given a username", async ()=>{
+      const client = await MongoClient.connect(
+        "mongodb://localhost:27017/TEST_DB",
+      {
+        useNewUrlParser: true,
+        useUnifiedTopology:true,
+      })
+
+      const db = client.db("TEST_DB")
+      .
+      .
+      .
+      .
+    })
+  })
+[end]
+
+# Probando el server con TEST DOUBLES & SINON
+1. Ya tenemos nuestro wrapper funcionando y sabemos que hace sus operaciones bien cuando tiene que conectarse con la base de datos
+
+2. Ahora lo que queremos es empezar a probar nuestro servidor, para esto necesitaremos crear un "test double" de nuestro wrapper y lo lograremos con la ayuda de SINON
+
+3. Para instalar sinon, "npm i --save-dev sinon"
+
+4. Como funciona sinon es que cuando en nuestra prueba llamemos al "getUserByUsername" y se intente conectar con la base de datos, sinon se encargará de modificar esa funcion y devolverá la data que nosotros elijamos simulando que todo el proceso de comunicacion con la base de datos fue exitoso
+
+5. Debemos hacer un "export default {getUserByUsername}" en nuestro archivo db para poder decirle luego a sinon que esa funcion es la que va a "falsear"
+
+[javascript]
+  //server.test.js
+  import sinon from "sinon";
+  import request from "supertest";
+  import expect from "chai";
+  import db from "./db";
+
+  describe("GET /users/:username", () => {
+    it("send the correct response when a user with the username is found", async () => {
+
+      const fakeData = {
+        id: "123",
+        username: "abc",
+        email: "abc@gmail.com",
+      };
+
+      const stub = sinon.stub(db, "getUserByUsername").resolve(fakeData);
+      // Con la linea de arriba le estamos diciendo a sinon que en el objeto db queremos que la funcion getUserByUsername se resuelva a la variable fakeData que acbamos de crear
+
+      stub.restore();
+      // Al crear stubs, tenemos que recordar siempre correr el stub.restore, porque stub lo que hace es que reemplaza la funcion getUserbyusername de nuestro wrapper con una version falsa
+
+      // Debemos llamar el restore para asegurarnos que stub deshace esa version falsa y todo funcione adecuadamente
+    });
+  });
+
+[end]
+
+6. Ya que tenemos nuestro test double creado podemos ver como testear un endpoint en el server, para esto usaremos "supertest" que nos permite testear end points sin iniciar el servidor
+
+  => Vamos a usar supertest para probar que el codigo de status (200) y el content type de la respuesta sea el apropiado
+
+  => Probar que el body de la respuesta sea el apropiado, en este caso, el objeto con la informacion del usuario
+
+  => No olvidarnos de importar el servidor  (app) del archivo del server
+
+[javascript]
+  //server.test.js
+  import sinon from "sinon";
+  import request from "supertest";
+  import {expect} from "chai";
+  import db from "./db";
+  import {app} from "./server"
+
+  describe("GET /users/:username", () => {
+    it("send the correct response when a user with the username is found", async () => {
+      const fakeData = {
+        id: "123",
+        username: "abc",
+        email: "abc@gmail.com",
+      };
+
+      const stub = sinon.stub(db, "getUserByUsername").resolve(fakeData);
+
+      request(app).get("/users/abc")
+      // Aca estamos probando el endpoint y el username es "abc" porque es el username del fakeData que estamos enviando
+
+      // Para probar lo que esperamos que devuelva el servidor debemos agregar mas a la linea anterios, es decir
+
+
+      await request(app)
+        .get("/users/abc")
+        .expect(200)
+        .expect("Content-Type", /json/)
+        .expect(fakeData);
+      // Probamos que devuelva 200, que el content-type sea json, y que devuelva la data que queremos
+
+      stub.restore();
+    });
+  });
+[end]
+
+7. Debemos asegurarnos que nuestro stub test double sea llamado con los argumentos correctos, por ahora estamos diciendo que el stub está retornando el fakeData no importa que
+
+  => Esto significa que, cuando activamos el endpoint el servidor puede  estar llamando el test double y pasando los argumentos falsos o no estar pasando argumentos y con los assertions que tenemos nunca pillariamos el error
+
+  => Es necesario entonces, checkear si el stub fue llamado o no y con que argumentos, para eso usamos la siguiente linea
+  "expect(stub.getCall(0).args[0]).to.equal("abc");"
+
+  => Esta linea lo que dice es:
+    => En rl primer call de nuestro stub, esperamos que el primer argumento que se pase sea igual a "abc", es decir, al username que estamos probando
+
+8. Ahora empezamos a implementar nuestro servidor, creamos un servidor con express, necesitamos el acceso al url parameter y ademas traemos nuestro wrapper
+[javascript]
+  // server.js
+  import express from "express";
+  import db from "./db";
+
+  const app = express();
+
+  app.get("/users/:username", async (req, res) => {
+    const { username } = req.params;
+    const user = await db.getUserByUsername(username);
+    res.json(user);
+  });
+
+  export { app };
+[end]
+
+# Probando el error path en el servidor #
+=> Vamos a escribir el caso en el que el servidor encuentre un error, para esto debemos:
+  1. Enviar un status de 500
+  2. Enviar en el body un mensaje con más información del error
+
+=> Este test se va parecer mucho a cuando un usuario es encontrado, vamos a usar un test double para engañar de nuevo y en vez de recibir datos del usuario, vamos a recibir un error, o que tiro un error
+[javascript]
+  it("sends the correct response when there is an error", async () => {
+  const fakeError = { message: "Something went wrong" };
+
+  const stub = sinon.stub(db, "getUserByUsername").throws(fakeError);
+  // Hacemos que la funcion, tire un error con el mensaje fakeError
+
+  // assertion, donde decimos que esperamos un error de tipo 500, y que venga con fakeError
+  await request(app)
+    .get("/users/abc")
+    .expect(500)
+    .expect("Content-Type", /json/)
+    .expect(fakeError);
+
+  stub.restore();
+  });
+[end]
+
+=> Al correr el test, va a fallar porque en nuestro servidor, no tenemos aun como manejar los errores esto lo podemos solucionar:
+  1. Agregamos un try catch
+  2. En el try va la data del usuario cuando es satisfactoria la peticion
+  3. en el catch va el error
+[javascript]
+  import express from "express";
+  import db from "./db";
+
+  const app = express();
+
+  app.get("/users/:username", async (req, res) => {
+    const { username } = req.params;
+
+    try {
+      const user = await db.getUserByUsername(username);
+      res.json(user);
+    } catch (e) {
+      res.status(500).json(e);
+    }
+  });
+
+  export { app };
+[end]
+
+# Correr test automaticamente #
+=> Es solo agregar al script el flag "--watch"
+  "NODE_ENV=test npx mocha \"src/**/*.test.js\" --recursive --require @babel/register --file src/mocha-setup.js --watch"
+
+# Checking test coverage with NYC #
+=> Es una buena idea, revisar que tanto del codigo de produccion estamos "testeando", con NYC podemos hacer esto
+  "npm i --save-dev NYC"
+
+=> Para usar nyc debemos crear un script
+  "coverage":"NODE_ENV=test nyc --reporter=lcov --reporter=text npm run test"
+  "npm run coverage"
+
+=> Esto generará un reporte, y hasta una carpeta con un html el cual podemos analizar donde nos muestra el codigo de produccion y que lineas se han llamado durante los tests
+
+# NEXT STEPS #
+1. Emmanuel Henri => Testing and Debuggin on React
