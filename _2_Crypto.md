@@ -125,3 +125,42 @@ Una vez esto este completo, se podran usar L2 con la seguridaad de ETH
    Se enfoca solo en data availability & ordering transaccions, esto hace que la verificada de bloques se pueda simplificar con `data availability proof`. Basicamente cada noto en la red debe muestrear un pedazo de codigo del bloque para confirmar su validez y a traves de este muestreo colectivo la red llega a un acuerdo. Entre mas nodos existan, mejor es el sistema
 
 #### Play-to-Earn, The Gamification of Digital Assets
+
+## 15 ENERO 2022
+
+1. Narrativa en este momento es DeFi Play To Earn + NFT, gamification of DeFi
+2. Institution to DeFi ??
+   1. SOL -> Bank Of America recomendando comprar SOL (cheaper ETH)
+   2. QRDO (QredoNetwork) -> Key management, sharting the key
+      Metamask Institutional Wallet partner with QRDO
+   3. Aave -> Aave Arc, institutional pool
+   4. DON-KEY -> Low Cap play
+   5. Spool -> Middleware entre Yield & Institution
+   6. Luna -> Anchor + insurance. Atractivo para Institution
+
+## 17-JAN-22
+
+1. COTI en Cardano -> Djed stablecoin
+2. Paribus PBX
+3. Gero Wallet (GERO)
+4. Algoritmic stablecoins
+5. Investigar sobre Yearn finance, que hace
+6. Olympus DAO -> Primer Protocol Owned Liquidity (PoL)
+
+## 18-JAN-22
+
+### SOLID - FTM new token Daniele & Andrej
+
+TIME va pasar de OHM model a SPAC (special purpose acquisition company), es una compañia formada solamente para unir y adquirir companies
+
+- OHM model incetivies liquidty, no es sostenible en el tiempo por el dilution
+- ve(3,3) incentives fees. Ve - tocken locking. (3,3) rebasing, the longer you hold, more wMemo you earn
+
+## 19-JAN
+
+1. Mars protocol en terra, hay que estar atentas sera un AAVE -> Mucha ganancia si despega con el toque de gobernanza
+
+   - Acumular MARS y bloquearlos en gobernanza cuando salga
+
+2. Astroport -> Va ser el DEX de LUNA
+   - Aportar a las pools para ganar tokens, si pega podemos sacar buena ganancia
