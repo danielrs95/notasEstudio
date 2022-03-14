@@ -108,3 +108,22 @@ Floor partner = Partner initial oxSOLID / (Total Partner Initial Solid * 0.25)
 - 5% to vlOXD paid as oxSOLID
 - 0-5% to oxSOLID/SOLID and OXD/WFTM LPs paid as oxSOLID. Defaults to 0%, must be voted
 - 0-5% treasury, defaults 0%, must be voted
+
+## Notes
+
+A bunch of protocols seem to base their analytics site on the same code base, like <https://info.spookyswap.finance/> – since Solidly's doesn't appear to be public on GitHub and who knows if/when it'll be maintained with handover of the main frontend, maybe check out Spooky's repo and try asking in their Discord, devs are probably helpful: <https://github.com/SpookySwap/spooky-info>
+
+It appears to mostly use The Graph under the hood, a GraphQL API
+
+1. To claim rewards from oxd contracts [link](https://ftmscan.com/address/0xda00bff59141ca6375c4ae488da7b387960b4f10#writeProxyContract)
+   1. Connect web3 wallet
+   2. Line 3 is for the LP rewards
+   3. Line 2 is for oxSolid staked on Earn tab
+
+2. To see 0xDAO v2 emission rates [link](https://oxdao-one.vercel.app/)
+
+To swap OXDv2 use this address: 0xc5A9848b9d145965d821AaeC8fA32aaEE026492d
+
+To swap oxSOLID use this address: 0xDA0053F0bEfCbcaC208A3f867BB243716734D809
+
+1. Chart of OXDv2 [link](https://dexscreener.com/fantom/0xcb6eab779780c7fd6d014ab90d8b10e97a1227e2)
