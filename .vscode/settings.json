@@ -1,4 +1,7 @@
 {
   "cSpell.words": ["bytecode", "incentivized", "Incentivizes", "nomiclabs"],
-  "cSpell.ignoreWords": ["stakers"]
+  "cSpell.ignoreWords": [
+    "stakers"
+  ],
+  "cSpell.enabled": true
 }
