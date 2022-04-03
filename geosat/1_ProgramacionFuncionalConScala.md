@@ -1,33 +1,33 @@
-# Programacion funcional con scala
+# Programación funcional con scala
 
-Los tipos de datos de scala son parecidos a los que tienen todos los lenguajes de programacion, lo diferente es como se relacionan estos tipos entre ellos
+Los tipos de datos de scala son parecidos a los que tienen todos los lenguajes de programación, lo diferente es como se relacionan estos tipos entre ellos
 
-Scala mezcla conceptos de programacion orientada a objetos con programacion funcional, el polimorfismo generado opr la herencia de estos tipos de datos puede ser importante en algunas ocasiones
+Scala mezcla conceptos de programación orientada a objetos con programación funcional, el polimorfismo generado opr la herencia de estos tipos de datos puede ser importante en algunas ocasiones
 
 Existe un tipo de dato llamado `Any`, debajo de este tendremos otros dos, `AnyVal` y `AnyRef`
 
 ![geosat_1_1](../images/geosat_1_1.png)
 
-Los tipos que se relacionan con `AnyVal` son los tipos basicos que se pueden agrupar en 5 grupos
+Los tipos que se relacionan con `AnyVal` son los tipos básicos que se pueden agrupar en 5 grupos
 
 1. Boolean
-2. Double, Float, Long, Int, Short -> tipos numericos
+2. Double, Float, Long, Int, Short -> tipos numéricos
 3. Byte -> datos binarios
 4. Char -> strings
-5. Unit -> Expresa la unidad o el vacio
+5. Unit -> Expresa la unidad o el vacío
 
 Finalmente tendremos un tipo de dato llamado `Nothing`, expresa la nada
 
-- Todos los datos provienen de `Any`, todos los tipos tienen en comun `Any`
+- Todos los datos provienen de `Any`, todos los tipos tienen en común `Any`
   - Any es el top type
 
-- Ningun tipo de dato puede provenir de `Nothing`
+- Ningún tipo de dato puede provenir de `Nothing`
   - Nothing es un bottom type, el dato mas bajo
 
 ## Inmutabilidad
 
 1. Scala es capas de inferir el tipo de dato
-2. Cuando se define una variable con `var` permite mutacion, es decir, se puede cambiar el valor
+2. Cuando se define una variable con `var` permite mutación, es decir, se puede cambiar el valor
 3. Cuando se define una variable con `val` no permite cambiar su valor
 
     ```js
@@ -37,23 +37,23 @@ Finalmente tendremos un tipo de dato llamado `Nothing`, expresa la nada
 
     val y = 1
     y = 2
-    // error: reassigment to val
+    // error: reassignment to val
     ```
 
-4. En programacion funcional, evitaremos siempre los datos mutables de ser posible
-   1. La razon principal es que la mutabilidad va a dificultar razonar sobre el codigo
+4. En programación funcional, evitaremos siempre los datos mutables de ser posible
+   1. La razón principal es que la mutabilidad va a dificultar razonar sobre el código
 
-5. La mutabilidad deberia usarse cuando la eficiencia que ganamos agregandola es mayor que la complejidad cognitiva que genera el codigo
+5. La mutabilidad debería usarse cuando la eficiencia que ganamos agregándola es mayor que la complejidad cognitiva que genera el código
 
 ## Expresiones
 
-1. Scala es un lenguaje orientado a expresiones, todo lo que escribamos va ser intrinsecamente una expresion
+1. Scala es un lenguaje orientado a expresiones, todo lo que escribamos va ser intrínsecamente una expresión
 
-2. Bloques de codigo, que siempre retornaran un valor por esto no se usara la palabra clave `return`
+2. Bloques de código, que siempre retornaran un valor por esto no se usara la palabra clave `return`
    1. El ultimo valor del bloque es el valor de retorno
    2. Para devolver nada (void) devolvemos `Unit`
-   3. El ultimo valor que este entre `()`, `{}` es lo que retornara el `return` implicito de escala
-      1. Entre `()`  solo puede haber 1 expresion entre `{}`  varias
+   3. El ultimo valor que este entre `()`, `{}` es lo que retornara el `return` implícito de escala
+      1. Entre `()`  solo puede haber 1 expresión entre `{}`  varias
 
     ```js
       def x = (3)
@@ -78,14 +78,14 @@ Finalmente tendremos un tipo de dato llamado `Nothing`, expresa la nada
 Las funciones transforman los datos  `f: D -> R`
 
 1. Funciones de Orden superior
-   1. Cuando tratamos una funcion como un valor mas, es decir, lo vamos a poder pasar como variable
-   2. Tambien podremos retornar una funcion desde otra funcion!
+   1. Cuando tratamos una función como un valor mas, es decir, lo vamos a poder pasar como variable
+   2. También podremos retornar una función desde otra función!
 
-2. Funciones anonimas o funciona lambdas
+2. Funciones anónimas o funciona lambdas
 3. Funciones como objetos
-4. Funciones como metodos
+4. Funciones como métodos
 
-En escala las funciones basicamente se tratan igual que una definicion
+En escala las funciones básicamente se tratan igual que una definición
 
 ```ts
 def f(x: Int) = x * x
@@ -95,7 +95,7 @@ f(4)
 // res1: Int = 16
 ```
 
-Una funcion anonima y su asignacion a una variable
+Una función anónima y su asignación a una variable
 
 ```ts
 (x: Int) => x * x
@@ -107,7 +107,7 @@ val a = (x: Int) => x * x
 En scala las funciones son tratadas como objetos
 
 1. Para saber esto usamos `apply`
-   1. Las funciones anonimas son tratadas como objetos
+   1. Las funciones anónimas son tratadas como objetos
 
 ```ts
 a.apply(2)
@@ -119,9 +119,9 @@ f.apply(2)
 
 ### Funciones de orden superior
 
-1. Pasamos h(x) como parametro a g(x) -> g(h(x)) = h(3)
-2. g(x) evalua el valor que nos devuelve evaluar la funcion cuando vale 3 h(3)
-   1. Que pasaria si evaluamos g(x) cuando h es la funcion `f(x:Int) = x*x`
+1. Pasamos h(x) como parámetro a g(x) -> g(h(x)) = h(3)
+2. g(x) evalúa el valor que nos devuelve evaluar la función cuando vale 3 h(3)
+   1. Que pasaría si evaluamos g(x) cuando h es la función `f(x:Int) = x*x`
    2. h(3) = 9 -> Entonces g = 9
 
 ```js
@@ -147,22 +147,22 @@ k(f)(4)
 k f 4
 ```
 
-## Secuencias, Conjus y Mapas -> Collections
+## Secuencias, Conjuntos y Mapas -> Collections
 
-1. Listas: Es el dato mas basico en lenguajes funcionales, son inmutables y algunos ejemplos son:
+1. Listas: Es el dato mas básico en lenguajes funcionales, son inmutables y algunos ejemplos son:
    1. List
    2. Seq
    3. Array
 
-2. Conjuntos: Similar a una lista pero permite hacer las operaciones logicas de los conjuntos
+2. Conjuntos: Similar a una lista pero permite hacer las operaciones lógicas de los conjuntos
    1. Set
 
-3. Mapas: Tambien conocidos como diccionarios, informacion semiestructural
+3. Mapas: También conocidos como diccionarios, información semiestructural
    1. Map
 
 ![2](../images/geosat_1_2.png)
 
-1. En programacion funcional no usaremos loops como `for` o `while`. Se usan funciones que recorren los elementos por nosotros como:
+1. En programación funcional no usaremos loops como `for` o `while`. Se usan funciones que recorren los elementos por nosotros como:
    1. `map()`
    2. `filter()`
    3. `forEach()`
@@ -184,7 +184,7 @@ k f 4
     ```
 
     - El appended se puede escribir de otra manera, `:+`
-    - Tambien podemos cambiar el llamado de la funcion, usando `.` y `()`
+    - También podemos cambiar el llamado de la función, usando `.` y `()`
 
     ```js
     a1 :+ 4
@@ -231,7 +231,7 @@ k f 4
     // m2: scala.collection.immutable.Map[Int,String] = Map(1 -> hola, 2 -> hello)
     ```
 
-6. Podemos recorrer toda la lista con `map()` pasandole una funcion anonima que modificara cada elemento
+6. Podemos recorrer toda la lista con `map()` pasándola una función anónima que modificara cada elemento
 
 ```js
 c2.map(x => x+1)
@@ -243,8 +243,8 @@ c2.map(x => x+1)
 1. Tuplas: Para agrupar distintos tipos de datos en una sola estructura
 2. Objetos: Sirven como las tuplas pero nos permiten nombrarlos para programar de manera mas organizada
 
-3. Las clases en Programacion Orientada a Objetos tendra atributos y metodos
-4. En Programacion Funcional se separan clases que contienen atributos y clases que contienen metodos (operaciones)
+3. Las clases en Programación Orientada a Objetos tendrá atributos y métodos
+4. En Programación Funcional se separan clases que contienen atributos y clases que contienen métodos (operaciones)
 
     ```js
     val tupla = (1, "daniel", false)
@@ -258,10 +258,10 @@ c2.map(x => x+1)
     // p: Persona = Persona(1,daniel,true)
     ```
 
-5. Para seleccionar en una tupla usamos `._x` donde x es la posicion empezando en 1.
+5. Para seleccionar en una tupla usamos `._x` donde x es la posición empezando en 1.
    1. Para seleccionar en un objeto usamos `.propiedad`
    2. Podemos generar un objeto a partir de una tupla usando la propiedad `tupled()` de las clases
-      1. Tambien se puede generar una tupla a partir de un objeto con `unapply`
+      1. También se puede generar una tupla a partir de un objeto con `unapply`
 
     ```js
     tupla._1
@@ -279,14 +279,14 @@ c2.map(x => x+1)
 
 ## Pattern Matching
 
-En programacion funcional la herencia no suele ser tan importante como en programacion orientada a objetos pero la forma de los datos suelen importar mucho mas
+En programación funcional la herencia no suele ser tan importante como en programación orientada a objetos pero la forma de los datos suelen importar mucho mas
 
 Pattern matching nos permite definir casos de emparejamiento para hacer algo con los datos que cumplen dicho emparejamiento
 
-- Basicamente pensar en switch
+- Básicamente pensar en switch
 - Un `match` tiene un valor, la palabra clave `match` y al menos un `case`
 
-1. "hola" se convierte en el operando izquierdo del `match`, en el lado derecho tenemos una expresion con 3 casos
+1. "hola" se convierte en el operando izquierdo del `match`, en el lado derecho tenemos una expresión con 3 casos
    1. El ultimo caso `_` es un `catch all` para cualquier otro valor que no cumpla con los 2 casos
 
     ```js
@@ -320,10 +320,10 @@ Pattern matching nos permite definir casos de emparejamiento para hacer algo con
 
 2. Otro caso de uso es usar matching on case class
    1. Vamos a definir un class de tipo Persona
-   2. Tendra 2 datos un nombre y edad
+   2. Tendrá 2 datos un nombre y edad
    3. Definimos 2 objetos de este tipo de dato
-   4. Definimos una funcion `h(x)`
-   5. Recibira un `x` de tipo `Persona`
+   4. Definimos una función `h(x)`
+   5. Recibirá un `x` de tipo `Persona`
    6. Emparejara con un `match` un caso donde:
       1. `y.edad` es mayor que 18
 
@@ -346,12 +346,12 @@ h(p2) // "No es mayor de edad"
 
 ## Tail recursion
 
-La recursion es una manera de abordar los problemas donde una funcion se llama a si misma, es la manera clasica de programar en lenguajes funcionales
+La recursion es una manera de abordar los problemas donde una función se llama a si misma, es la manera clásica de programar en lenguajes funcionales
 
-Tail recursion es una modificacion sobre la funcion con el objetivo de optimizar su ejecucion, se busca:
+Tail recursion es una modificación sobre la función con el objetivo de optimizar su ejecución, se busca:
 
    1. No llenar el stack con llamadas
-   2. Realizar la operacion que queremos y pasar su acumulacion al siguiente paso
+   2. Realizar la operación que queremos y pasar su acumulación al siguiente paso
 
 ```js
 def factorial(n: Long): Long =
@@ -372,16 +372,16 @@ if (3==0) 1 else 3 * factorial(3-1)
 24
 ```
 
-## Agregacion
+## Agregación
 
 Cuando trabajamos con listas es usual usar acumuladores para entregar un resultado final, scala tiene algunas funciones que nos ayudan a realizar estos procesos
 
-1. `foldLeft & foldRigh` permiten acumular sin necesidad de tener variables externas
-   1. Generamos una lista con base en los numeros que queremos `(1 to 3)`
+1. `foldLeft & foldRight` permiten acumular sin necesidad de tener variables externas
+   1. Generamos una lista con base en los números que queremos `(1 to 3)`
    2. Al ser lista tenemos disponibles las funciones de listas
-   3. `foldLeft()` recibe un valor inicial y la funcion que se encargara de correr sobre cada uno de los elementos
-      1. Esta funcion recibe 2 parametros, el acumulado que se devolvera luego de cada iteracion
-      2. El elemento actual en el que se encuentra la iteracion
+   3. `foldLeft()` recibe un valor inicial y la función que se encargara de correr sobre cada uno de los elementos
+      1. Esta función recibe 2 parámetros, el acumulado que se devolverá luego de cada iteración
+      2. El elemento actual en el que se encuentra la iteración
 
 ```js
 val factorial = (1 to 3).foldLeft(1L)(
@@ -391,7 +391,7 @@ val factorial = (1 to 3).foldLeft(1L)(
 
 ## Funciones totales y parciales
 
-Una funcion total es aquella que puede dar respuesta a todos los elementos de su dominio, las parciales no pueden dar respuesta a todos algunos ejemplos son:
+Una función total es aquella que puede dar respuesta a todos los elementos de su dominio, las parciales no pueden dar respuesta a todos algunos ejemplos son:
 
 1. get()
 2. head()
@@ -403,12 +403,12 @@ val a = List(1,2,3)
 a.head // 1 -> Devuelve el primer elemento
 a.tail // List[Int] = List(2,3) -> Devuelve la lista sin el primer elemento
 
-// Si creamos una lista vacia
+// Si creamos una lista vaciá
 val b = Nil // b: scala.collection.immutable.Nil.type = List()
 b.head // error
 b.tail // error
 
-// Take es una funcion total
+// Take es una función total
 b.take(1) // List[Nothing] = List()
 ```
 
@@ -416,7 +416,7 @@ b.take(1) // List[Nothing] = List()
 
 Es una manera de razonar donde el primer paso es encontrar lo que se conoce como caso base, un hecho concreto que usaremos para iniciar el modelo que queremos modelar
 
-Posteriormente se modela la continuacion del proceso (paso inductivo) usando el caso base anterior
+Posteriormente se modela la continuación del proceso (paso inductivo) usando el caso base anterior
 
 El resultado de este proceso se convierte el nuevo caso base y se continua iterando
 
@@ -426,25 +426,25 @@ El resultado de este proceso se convierte el nuevo caso base y se continua itera
 2. Los tipos mantienen la consistencia de un sistema y se vuelven una manera de probarlo
 3. Los tipos son una parte critica para hacer abstracciones
 4. Los tipos son proposiciones y nuestros programas son pruebas
-   1. El compilador se convierte en un razones que prueba el software con base a las propociones o tipos que le damos
+   1. El compilador se convierte en un razones que prueba el software con base a las proposiciones o tipos que le damos
 
 ## Traits
 
-Son tipos de datos abstractos que contienen ciertos campos y metodos, en la herencia de scala una `class` solopuede extender otra `class` pero puede extender multiples `traits`
+Son tipos de datos abstractos que contienen ciertos campos y métodos, en la herencia de scala una `class` solo puede extender otra `class` pero puede extender multiples `traits`
 
 ```js
 trait Greeter {
-  def greet(name: Strin): Unit
+  def greet(name: String): Unit
 }
 
-// Tambien pueden tener valores por defecto
+// También pueden tener valores por defecto
 trait Greeter {
-  def greet(name: Strin): Unit =
+  def greet(name: String): Unit =
     println("Hello, " + name + "!")
 }
 ```
 
-Podemos extender traits con la palabra `extends` y tambien poder sobreescribir una implementacion con `override`
+Podemos extender traits con la palabra `extends` y también poder sobre escribir una implementación con `override`
 
 ```js
 class DefaultGreeter extends Greeter
@@ -462,11 +462,11 @@ val customGreeter = new CustomizableGreeter("How are you, ", "?")
 customGreeter.greet("Scala developer") // How are you, Scala developer?
 ```
 
-## Tipos genericos
+## Tipos genéricos
 
-Son datos que el compilador determina al ejecutarse y depende del valor que le llega, basicamente son comodines
+Son datos que el compilador determina al ejecutarse y depende del valor que le llega, básicamente son comodines
 
-1. Para definir un tipo generico usamos `[]`
+1. Para definir un tipo genérico usamos `[]`
 
 ```js
 
@@ -486,3 +486,156 @@ list.foreach(element => println(element))
 // true
 // <function>
 ```
+
+## Lazy
+
+`lazy` variables defers the initialization of a variable, this lazy initialization pattern is common in Java programs
+
+1. A `val` is executed when it is defined
+2. A `lazy val` is executed when it is accessed the first time
+   1. The initialization of a `val` is delayed until it is accessed for the first time, after that point, it acts just like a regular `val`
+
+3. On the example:
+   1. When the `lazy val` is declared, all that is saved to the `foo` value is a lazy function that hasn't been evaluated yet
+   2. When the regular `val` is set, we see the `println` call execute and the value assigned to `bar`
+   3. When we evaluate `foo` the first time we see `println` execute but not when is evaluated the second time
+   4. Similarly, when `bar` is evaluated we don't see `println` execute, only when it is declared
+
+    ```js
+    `scala>` lazy val foo = {
+        |   println("Initializing")
+        |   `my foo value`
+        | }
+    // foo: String = <lazy>
+
+    `scala>` val bar = {
+        |   println("Initializing bar")
+        |   "my bar value"
+        | }
+    // Initializing bar
+    // bar: String = my bar value
+
+    `scala>` foo
+    // Initializing
+    // res3: String = my foo value
+
+    `scala>` bar
+    // res4: String = my bar value
+
+    `scala>` foo
+    // res5: String = my foo value
+    ```
+
+4. In contrast to a method (defined with `def`) a `lazy val` is executed once and then never again, this can be useful when an operation takes long time to complete
+   1. When the values `x` and `y` are never used, only `x` in unnecessarily wasting resources
+   2. If `y` has no side effects and we don't know how often  it is accessed it is useless to declare it as `def` since we don't want to execute it several times
+
+    ```js
+    `scala>` class X { val x = { Thread.sleep(2000); 15 } }
+    // defined class X
+
+    `scala>` class Y { lazy val y = { Thread.sleep(2000); 13 } }
+    // defined class Y
+
+    `scala>` new X
+    // res5: X = X@262505b7 // we have to wait two seconds to the result
+
+    `scala>` new Y
+    // res6: Y = Y@1555bd22 // this appears immediately
+    ```
+
+## Option/Some/None
+
+Scala `Option[T]` is a container for zero or one element of a given type
+
+An `Option[T]` can be either `Some[T]` or `None` object.
+
+For instance, the `get` method of Scalas Map produces Some(value) if a value corresponding to a given key has been found or None if the given key is not defined in the Map
+
+![3](../images/geosat_1_3.png)
+
+The base class `scala.Option` is abstract and extends `scala.collection.IterableOnce` this makes `Option` behaves like a container
+
+1. Both `o1` and `o2` are instances of `Option[Int]`
+
+    ```js
+    val o1: Option[Int] = None
+    val o2 = Some(10)
+    ```
+
+2. We can retrieve the `Option` value via `get`, however if we used on an instance of `None` then we will get an error, so its better to use `gerOrElse` to give it a default value
+
+    ```js
+    val v1 = o1.getOrElse(0)
+    ```
+
+3. We can treat Option as a collection of 1 element, therefor we can use map on it
+
+```js
+val lista = List(1,2,3)
+
+lista.find(x=>x==3)
+// Option[Int] = Some(3)
+
+lista.find(x => x==3).map(y => y+1)
+// Option[Int] = Some(4)
+
+lista.find(x => x==3).map(y => y+1).get
+// Int = 4
+```
+
+## Try/Success/Failure
+
+This is a clean way to handle exceptions, if the code succeeds, we return a `Success` object with the result, we pass the error in a `Failure` object
+
+1. `Try` makes it very simple to catch exceptions
+2. `Failure` contains the exception
+
+![4](../images/geosat_1_4.png)
+
+```js
+def toInt(s: String): Try[Int] = Try {
+  Integer.parseInt(s.trim)
+}
+
+`scala>` val a = toInt("1")
+// a: scala.util.Try[Int] = Success(1)
+
+`scala>` val b = toInt("boo")
+// b: scala.util.Try[Int] = Failure(java.lang.NumberFormatException: For input string: "boo")
+```
+
+## Either/Left/Right
+
+Another exception less alternative is either
+
+Either represents two mutually exclusive possible values represented by Left and Right
+
+1. When handling errors, the convention is to use `Left` for the error and `Right` for the result
+
+## Modelo por actores
+
+La base del modelo son los actores, cada actor tiene una bandeja de entrada donde recibe mensajes para actuar con base a ellos
+
+1. Permite coordinar distintas funcionalidades entre los diferentes tipos de actor
+   1. Pueden haber multiples actores del mismo tipo
+   2. Existe un coordinador de actores principal que distribuye trabajo según el tipo de actor
+
+2. Si un actor falla, su coordinador se dará cuenta y puede redirigir el trabajo
+
+3. Si un actor tiene muchos mensajes y no puede, avisara al coordinador para crear un nuevo actor del mismo tipo que le ayude
+
+4. Si el coordinador detecta que no necesita mas algún actor lo eliminara para optimizar recursos
+
+El framework play, internamente usa los actores
+
+1. Cuando a play le llega una petición HTTP un coordinador de actores crea un actor basado en la lógica que escribimos
+   1. Si llegan muchas peticiones el sistema de actores crece o decrece según la necesidad
+
+## Futures and Promises
+
+## Recover - Futures
+
+## Serialization
+
+continuación

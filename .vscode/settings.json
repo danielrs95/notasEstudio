@@ -1,7 +1,40 @@
 {
-  "cSpell.words": ["bytecode", "incentivized", "Incentivizes", "nomiclabs"],
+  "cSpell.words": [
+    "bytecode",
+    "encapsulamiento",
+    "Encapsulamiento",
+    "getnum",
+    "incentivized",
+    "Incentivizes",
+    "inicializa",
+    "inicializamos",
+    "Instanciamos",
+    "instanciando",
+    "instanciar",
+    "Intelli",
+    "javac",
+    "Javadoc",
+    "Mantenibilidad",
+    "modularidad",
+    "Modularidad",
+    "nomiclabs",
+    "Outerclass",
+    "redefinidas",
+    "speciality",
+    "superclase",
+    "WORA"
+  ],
   "cSpell.ignoreWords": [
+    "Sobreescritura",
+    "instanciadas",
+    "instanciados",
+    "pasarle",
+    "spanish",
     "stakers"
   ],
-  "cSpell.enabled": true
+  "cSpell.enabled": true,
+  "cSpell.enableFiletypes": [
+    "markdown"
+  ],
+  "cSpell.language": "en,es-ES"
 }
