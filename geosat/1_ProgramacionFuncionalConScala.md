@@ -638,4 +638,27 @@ El framework play, internamente usa los actores
 
 ## Serialization
 
-continuación
+## Road
+
+1. Play
+   1. MVC (Model, View, Component)
+   2. Esta escrito con Akka -> Librería que implemente el modelo por actores, muy util para programación concurrente
+
+2. Slick
+   1. Para conexión a base de datos
+   2. ORM (Object Relational Mapping) funcional
+   3. No nos preocupamos por el pool de colecciones
+   4. Tiene soporte para streams
+   5. Es no bloqueante, programación asíncrona
+
+El framework play, internamente usa los actores
+
+1. Cuando a play le llega una petición HTTP un coordinador de actores crea un actor basado en la lógica que escribimos
+   1. Si llegan muchas peticiones el sistema de actores crece o decrece según la necesidad
+
+Los controladores se dividen en 2 secciones
+
+1. Repositorios -> Donde tendremos acceso a la base de datos haciendo consultas
+2. Donde haremos validaciones
+
+Scala provee Futuros que son como promesas nos permiten hacer programación asíncrona
