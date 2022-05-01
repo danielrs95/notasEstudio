@@ -228,7 +228,7 @@ Each route consist of
 3. Call to an action method (controllers.Clients.show(id: Long))
     - In the action call, the parameter type comes after the parameter name like in Scala
 
-Es posible aplicar modificadores by preceding the route with a line strating with a `+`
+Es posible aplicar modificadores by preceding the route with a line starting with a `+`
 
 This can change the behavior of certain Play components. One such modifier is the "nocsrf" modifier to bypass the CSRF filter
 
@@ -250,7 +250,7 @@ public Result dashboard(Http.Request request) {
 }
 ```
 
-Podemos ver un ejemplo tambien del backend de SISDEP
+Podemos ver un ejemplo también del backend de SISDEP
 
 `GET           /api/seguridad/usuario/ego                               controllers.seguridad.UsuarioEgoController.get(request: Request)`
 
@@ -361,7 +361,7 @@ public Result index() {
 }
 ```
 
-To discard a cookie in case you previoussly set a path or domain, make sure that you set the same path as the browser will only discard it if the name, path and domain match
+To discard a cookie in case you previously set a path or domain, make sure that you set the same path as the browser will only discard it if the name, path and domain match
 
 ```java
 public Result index() {
