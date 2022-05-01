@@ -6,9 +6,11 @@
     "bloqueante",
     "bytecode",
     "daemonless",
+    "Duser",
     "encapsulamiento",
     "Encapsulamiento",
     "getnum",
+    "HOCON",
     "incentivized",
     "Incentivizes",
     "inicializa",
@@ -30,6 +32,8 @@
     "redefinidas",
     "speciality",
     "superclase",
+    "Typesafe",
+    "unmanaged",
     "WORA"
   ],
   "cSpell.ignoreWords": [

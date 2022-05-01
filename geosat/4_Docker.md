@@ -172,3 +172,159 @@ El Dockerfile es básicamente un script que se ejecuta en orden de linea
 5. Hacemos el `build` y exponemos el puerto
 
 6. Entramos a nuestra aplicación
+
+## Pasando de Docker a Podman
+
+1. Una vez creada la imagen con Docker y la ayuda de sbt-native-package usamos `podman` para traernos la imagen que se genera
+
+  `sudo podman pull docker-daemon:sisdep:1.0-SNAPSHOT`
+
+  Básicamente nos estamos trayendo la imagen que se encuentra en el daemon de docker
+  _NOTE_ : Antes de poder traerlo se debe correr la imagen ? creería que si preguntar
+
+  Posterior a esto podemos correr el backend
+
+  `sudo podman run --env JAVA_OPTS="-Duser.timezone=UTC" -p 80:9000 -it sisdep:1.0-SNAPSHOT`
+
+## docker-compose.yml
+
+1. _Networks_
+
+    - Services communicate with each other through _Networks_
+
+    - A Network is a platform capability abstraction to establish an IP route between containers within services connected together
+
+2. _Volumes_
+
+   - Where services store and share persistent data
+
+   - The specification describes such a persisten data as a high-level filesystem mount with global options
+
+   - Allows the configuration of named volumes that can be reused across multiple services
+
+   - Example of 2 services where a database's data directory is shared with another service as a volume named `db-data`
+
+    ```yaml
+    services:
+      backend:
+        image: awesome/database
+        volumes:
+          - db-data:/etc/data
+
+      backup:
+        image: backup-service
+        volumes:
+          - db-data:/var/lib/backup/data
+
+    volumes:
+      db-data:
+    ```
+
+    1. `driver` -> Specify which volume driver should be used for this volume
+
+    2. `driver_opts` -> Specifies a list of options as key-value pairs to pass to the driver for this volume, those options are driver-dependent
+
+3. _Configs_
+
+    - For services that require data that is dependen on the runtime or platform
+
+    - Configs are comparable to Volumnes, in that they are files mounted into the container
+
+4. _Secrets_
+
+    - Specific configuration that should not be exposed
+
+_NOTA_: Usar digest para traer la imagen porque el short name pone problema, no lo encontraba
+
+```yaml
+version: '3.9'
+
+services:
+  front:
+    build:
+      context: front
+      dockerfile: Dockerfile
+    image: front-sisdep
+    container_name: nextjs
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  back:
+    image: docker.io/library/sisdep:1.0-SNAPSHOT
+    container_name: back-sisdep
+    restart: unless-stopped
+    environment:
+      - "JAVA_OPTS=-Duser.timezone=UTC"
+    networks:
+      - app-network
+    volumes:
+      - archivos:/archivos
+
+  webserver:
+    image: nginx:mainline-alpine
+    container_name: webserver
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - web-root:/var/www/html
+      # - ./nginx-conf:/etc/nginx/conf.d
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+      - dhparam:/etc/ssl/certs
+    depends_on:
+      - back
+
+    networks:
+      - app-network
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+      - web-root:/var/www/html
+    depends_on:
+      - webserver
+    command: certonly --webroot --webroot-path=/var/www/html --email vdjaramillo@geosat.com.co --agree-tos --no-eff-email --force-renewal -d sisdep.geosat.com.co
+
+volumes:
+  certbot-etc:
+    driver: local
+    driver_opts:
+      type: none
+      device: /etc/letsencrypt/
+      o: bind
+  certbot-var:
+    driver: local
+    driver_opts:
+      type: none
+      device: /var/lib/letsencrypt/
+      o: bind
+  web-root:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/despliegues/sisdep/public/
+      o: bind
+  dhparam:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/despliegues/Desarrollo/sisdep/dhparam/
+      o: bind
+  archivos:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/despliegues/sisdep/archivos
+      o: bind
+
+networks:
+  app-network:
+    driver: bridge
+
+```
