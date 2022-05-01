@@ -376,3 +376,10 @@ Play uses `utf-8` by default
 For a text based HTTP response it is very important to handle the charset correctly
 
 The charset is used to both convert the text response to the corresponding bytes to send over the network socket and to update the `Content-Type`
+
+```java
+public Result index() {
+  return ok("<h1>Hello World!</h1>", "iso-8859-1")
+      .as("text/html; charset=iso-8859-1");
+}
+```
