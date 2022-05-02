@@ -1,5 +1,9 @@
 # Dudas
 
+## Backend
+
+1. En vez de usar el Range Results de play, usamos Akka para manejar el stream
+
 ## Pendientes
 
 1. Entrar como super administrador

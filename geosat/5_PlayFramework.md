@@ -383,3 +383,78 @@ public Result index() {
       .as("text/html; charset=iso-8859-1");
 }
 ```
+
+#### Range results
+
+Play supports part of _RFC 7233_ which defines how range requests and partial responses works
+
+It enables you to deliver a `206 Partial Content` if a satisfiable `Range` header is present in the request
+
+It will also returns a `Accept-Ranges: bytes` for the delivered `Result`
+
+Range results can be generated for a `Source`, `InputStream`, File and `Path`
+
+```java
+public Result index(Http.Request request) {
+  String content = "This is the full content!";
+  InputStream input = getInputStream(content);
+  return RangeResults.ofStream(request, input, content.length());
+}
+```
+
+------------------------------------------------------------
+------------------------------------------------------------
+
+### Session and Flash scopes
+
+If you have to keep data across multiple HTTP requests you can save them on:
+
+1. The Session
+    Data is available during the whole user sessions
+
+2. The Flash Scope
+    Are only available to the next request
+
+#### Working with Cookies
+
+Session and Flash data are not stored in the server but added to each subsequent HTTP Request, using HTTP cookies
+
+Because this are implemented using cookies, there are some implications
+
+1. The data size is limited(up to 4KB)
+2. Can only store string values
+3. Information in a cookie is visible to the browser
+4. Cookie information is _immutable_ to the original request, and only available to subsequent requests
+
+The play sessions is not intended to be used as a cache, if you need you can use the Play built-in cache mechanism and use the session to store a unique ID to associate the cached data with a specific user
+
+#### Session Configuration
+
+The default name for the cookie is `PLAY_SESSION`, can be changed by configuring the key `play.http.session.cookieName` in _application.conf_
+
+------------------------------------------------------------
+------------------------------------------------------------
+
+### Body parsers
+
+An HTTP request is a header followed by a body
+
+1. The header is typically small
+
+    It can be safely buffered in memory, therefore it's modelled using the _RequestHeader_ class
+
+2. The body can be potentially very long
+
+    It's not buffered in memory, is modelled as a stream
+
+    However many request body payloads are small and can be modelled in memory and to map the body stream to an object in memory play provides a _BodyParser_ abstraction
+
+Since Play is an asynchronous framework, the traditional `InputStream` can't be used to read the request body
+
+  Input streams are blocking, when you invoke `read` the thread invoking it must wait for data to be available
+
+Instead Play uses an asynchronous streaming library (Akka Streams), Akka is an implementation of _Reactive Streams_
+
+  _Reactive Streams_ is an initiative to provide a standard for asynchronous stream processing with non-blocking back pressure. [link1](http://www.reactive-streams.org/) [link2](https://github.com/reactive-streams/reactive-streams-jvm/blob/v1.0.3/README.md)
+
+Akka allows many asynchronous streaming APIs to seamlessly work together
