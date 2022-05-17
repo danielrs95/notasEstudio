@@ -8,11 +8,10 @@
 
 ## Pendientes
 
-1. `http://localhost:3000/regulaciones/traslados-infraestructura/caracterizacion`
 2. `http://localhost:3000/regulaciones/autorizaciones/resolucion`
-3. Verificar que la direccion este funcionando
 4. Card agregar Anexos en la pagina del detalle del traslado  x infraestructura
 5. Agregar resolucion desde el detalle de caracterizacion en traslado x infraestructura
+6. Select propio para hacer la transitoria y
 
 ## DominioSelector Front
 
