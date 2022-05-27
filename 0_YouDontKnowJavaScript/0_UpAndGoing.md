@@ -771,3 +771,19 @@ bar.ba // 42
 2. This linkage may seem like a strange feature of the language. The most common way this feature is used is try to emulate/fake a class mechanism with inheritance
 
 3. A more natural way of applying prototypes is a patter called _behavior delegation_ where you intentionally design your linked objects to be able to delegate from one to the other for parts of the needed behavior
+
+## Non-JavaScript
+
+Most JS is written to run in and interact with environment like browsers. A good chunk of the stuff that you write in your code is, strictly speaking not directly controlled by JavaScript
+
+The most common non-Javascript is the DOM API
+
+`var el = document.getElementById("foo")`
+
+1. The `document` variable exists as a global variable when your code is running in a browser.
+
+2. It's not provided by the JS engine, nor is it particularly controlled by the Javascript specifications
+
+3. It takes the form of something that looks like a normal JS object, but it's not really exactly that. It's special `object` often called a `host object`
+
+4. The `getElementById(..)` method looks like a normal JS function, but it's just a thinly exposed interface to a built-in method provided by the DOM from your browser
