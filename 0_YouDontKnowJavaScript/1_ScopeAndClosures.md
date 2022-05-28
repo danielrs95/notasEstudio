@@ -107,4 +107,99 @@ To summarize, two distinct actions are taken for a variable assignment:
 
 ### Compiler Speak
 
-When _Engine_ executes the code that _Compiler_ produced it  has to look up the variable `a` to see if it has been declared, and this is consulting _Scope_
+When _Engine_ executes the code that _Compiler_ produced it  has to look up the variable `a` to see if it has been declared, and this look-up is consulting _Scope_
+
+The type of look-up _Engine_ performs affects the outcome of the look-up
+
+In our case, it is said that _Engine_ would be performing an LHS look-up for the variable `a`. The other type of look-up is called RHS
+
+L & R stand for lefthand side and righthand side of an _assignment operation_
+
+An _LHS_ is done when a _variable_ appears on the lefthand side of an assignment
+    An _LHS_ is trying to fin the _VARIABLE CONTAINER_ itself, so that it can assign the value to it
+
+An _RHS_ is done when a _variable_ appears on the righthand side of an assignment
+    - An _RHS_ is indistinguishable, from simply a look-up of the value of some variable
+    - You could think _RHS_ means _go get the value of_
+
+When we say `console.log(a)`
+
+The reference to `a` is an _RHS_, because nothing is being assigned to `a` here. We are looking to retrieve the value of `a` and passed to `console.log(..)`
+
+By contrast: `a=2`
+
+The reference to `a` here is an _LHS_, we don't actually care what the current value is, we want to find the variable as a target for the `=2` assignment
+
+It's better to conceptually think about this topic as:
+
+_Who's the target of the assignment (LHS)?_
+_Who's the source of the assignment (RHS)?_
+
+Consider this program, which has both LHS and RHS references
+
+```js
+function foo(a) {
+  console.log(a)
+}
+
+foo(2);
+```
+
+1. The last line that invokes `foo(..)` as a function call requires an _RHS_ reference to foo
+
+    - Meaning, go look up the value of `foo` and give it to me
+    - `(..)` means the value of `foo` should be executed, so it'd better be a function
+
+2. There is an implied `a=2`, this happens when the value `2` is passed as an argument to the `foo(..)` function
+
+    - The 2 value is _assigned_ to the parameter `a`. To implicitly assign to parameter `a`, an _LHS_ look-up is performed
+
+3. As explained early, when we use the `console.log(a)` there is a _RHS_ look up
+
+________________________________________________________________________
+________________________________________________________________________
+
+## Nested Scope
+
+```js
+  function foo(a) {
+    console.log(a+b)
+  }
+
+  var b=2;
+
+  foo(2);
+```
+
+The _RHS_ reference for `b` cannot be resolved inside the function `foo`, but it can be resolved in the scope surrounding it (in this case the global)
+
+_Engine_ starts at the currently executing scope, looks for the variable there, then if not found, keep going up one level and so on
+
+If the outermost global scope is reached, the search stops, whether if finds the variable or not
+
+## Errors
+
+```js
+  function foo(a) {
+    console.log( a + b );
+    b = a;
+  }
+
+  foo( 2 );
+```
+
+When the _RHS_ occurs for `b` the first time, it will not be found.
+
+This is said to be an _undeclared_ variable, because it is not found in the scope
+
+If an _RHS_ fails to find a variable, anywhere in the nested scopes, this results in a `ReferenceError` being thrown by the _Engine_
+
+It's important to note that the error is of the type _ReferenceError_
+
+If the _Engine_ is performing an _LHS_ and it gets to the global scope without finding it, if the program is not in _Strict Mode_, the global scope will create a new variable of that name
+
+If a variable is found for an _RHS_ but you try to do something with its value that's imposible, the _Engine_ throws a _TypeError_
+
+_ReferenceError_ is scope resolution-failure related
+
+_TypeError_ implies that scope resolution was successful, but that there was an illegal/imposible action attempted against the result
