@@ -7,8 +7,8 @@ One of the most fundamental paradigms of nearly all programming languages is the
 
 These questions speak to the need for a well-defined set of rules for storing variables in some location, and for finding those variables at a later time. We'll call that set of rules _scope_
 
-________________________________________________________________________
-________________________________________________________________________
+____________________________________________________________________
+____________________________________________________________________
 
 ## Compiler theory
 
@@ -49,8 +49,8 @@ In traditional compiled-languages process your code will undergo typically 3 ste
 
     We'll just handwave and say there's a way to take our previously described AST for `var a = 2;` and turn it into a set of machine instructions to actually create a variable called a (including reserving memory,etc) and then store a value into a
 
-________________________________________________________________________
-________________________________________________________________________
+____________________________________________________________________
+____________________________________________________________________
 
 ## Understanding Scope
 
@@ -156,8 +156,8 @@ foo(2);
 
 3. As explained early, when we use the `console.log(a)` there is a _RHS_ look up
 
-________________________________________________________________________
-________________________________________________________________________
+____________________________________________________________________
+____________________________________________________________________
 
 ## Nested Scope
 
@@ -204,8 +204,8 @@ _ReferenceError_ is scope resolution-failure related
 
 _TypeError_ implies that scope resolution was successful, but that there was an illegal/imposible action attempted against the result
 
-________________________________________________________________________
-________________________________________________________________________
+____________________________________________________________________
+____________________________________________________________________
 
 ## Lexical Scope
 
@@ -214,3 +214,91 @@ The first traditional phase of a standard language compiler is called lexing (ak
 Lexing examines a string of source code characters and assigns semantic meaning to the tokens as a result of some parsing
 
 Lexical scope is scope that is defined at lexing time, in other words, lexical scope is based on where variables and blocks of scope are authored, by you, at write time, and thus is (mostly) set in stone by the time the lexer processes your code
+
+```js
+  function foo(a) {
+    var b = a * 2;
+
+    function bar(c) {
+      console.log(a,b,c)
+    };
+
+    bar( b * 3 );
+  }
+
+  foo(2) // 2, 4, 12
+```
+
+Existen 3 scopes anidados en esta función
+
+![2](../images/YDKJS_1.png)
+
+1. Bubble 1, encompasses the global scope and has just one identifier in it `foo`
+
+2. Bubble 2, encompasses the scope of `foo`, which includes the three identifiers: `a`, `bar`, and `b`
+
+3. Bubble 3, encompasses the scope of `bar`, and it includes just one identifier, `c`
+
+- Scope bubbles are defined by where the blocks of scope are written, let's just assume that each function creates a new bubble of scope
+
+- The nested bubbles are strictly nested, no bubble for some function can simultaneously exist inside two other outer scope bubbles
+
+### Look-ups
+
+The structure and relative placement of the scope bubbles fully explains to the engine all the places it needs to look to find an identifier
+
+1. In the previous code, the _Engine_ executes the `console.log(..)` and goes looking for the three references variables `a,b and c`
+
+    - First starts with the innermost scope bubble, the scope of `bar(...)`.
+    - It won't find `a` there, so it goes up one level to the scope of `foo(...)`
+    - It finds `a` there, same thing for `b`
+    - It finds `c` inside of `bar(...)`
+
+2. Had there been a `c` both inside of `bar(..)` and inside of `foo(..)`, the `console.log(..)` statement would have found and used the one in `bar(..)` never getting to `foo(..)
+
+3. _Scope look-up stops once it finds the first match_.
+
+    The same identifier name can be specified at multiple layers of nested scope, which is called _shadowing_ (the inner identifier, shadows the outer)
+
+4. Regardless of shadowing, scope look-up always starts at the innermost scope being executed at the time, and works its way out/up until the first match, and stops
+
+5. Global variables are automatically also properties of the global object (window in browsers, etc)
+
+    - It's possible to reference a global variable not directly by its lexical name, but instead as a property reference of the global scope
+
+    `window.a`
+
+    This technique gives access to a global variable that would be otherwise be inaccessible due to it being shadowed
+
+6. No matter where a function is invoked from, or how, it's lexical scope is only defined by where the function was declared
+
+7. The lexical scope look-up only applies to first-class identifiers such as `a`, `b`, and `c`
+
+    - If theres a reference to `foo.bar.baz`, the lexical scope look-up would apply to finding the `foo` identifier
+    - Once `foo` is located, object property-access rules take over to resolve the `bar` and `baz` properties
+
+## Cheating Lexical
+
+JS has 2 mechanisms to cheat lexical scope, but this leads to poorer performance
+
+### eval
+
+The `eval(...)` function in JS takes a string as an argument and treats the contents of the strings as if it had actually been authored code at that point in the program
+
+```js
+  function foo(str, a) {
+    eval (str); // CHEATING
+    console.log( a,b )
+  }
+
+  var b = 2;
+
+  foo('var b = 3;', 1); // 1, 3
+```
+
+1. The string `"var b=3;"` is treated at the point of the `eval(..)` call as code that was there all along
+
+    - Because this code declares a new variable `b=3`, it modifies the existing lexical scope of `foo(..)`
+    - The variable `b` created by `eval(..)` shadows the outer `b=2`
+
+2. `eval(..)` when used in a strict-mode program operates in its own lexical scope, which means declarations made inside of the `eval(..)` do not actually modify the enclosing scope
