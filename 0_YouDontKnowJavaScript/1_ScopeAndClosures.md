@@ -203,3 +203,14 @@ If a variable is found for an _RHS_ but you try to do something with its value t
 _ReferenceError_ is scope resolution-failure related
 
 _TypeError_ implies that scope resolution was successful, but that there was an illegal/imposible action attempted against the result
+
+________________________________________________________________________
+________________________________________________________________________
+
+## Lexical Scope
+
+The first traditional phase of a standard language compiler is called lexing (aka tokenizing).
+
+Lexing examines a string of source code characters and assigns semantic meaning to the tokens as a result of some parsing
+
+Lexical scope is scope that is defined at lexing time, in other words, lexical scope is based on where variables and blocks of scope are authored, by you, at write time, and thus is (mostly) set in stone by the time the lexer processes your code
