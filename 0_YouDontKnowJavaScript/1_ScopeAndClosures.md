@@ -302,3 +302,287 @@ The `eval(...)` function in JS takes a string as an argument and treats the cont
     - The variable `b` created by `eval(..)` shadows the outer `b=2`
 
 2. `eval(..)` when used in a strict-mode program operates in its own lexical scope, which means declarations made inside of the `eval(..)` do not actually modify the enclosing scope
+
+The other frowned-upon (and now deprecated!) feature in JS that cheats lexical scope is the `with` keyword
+
+### Performance
+
+Both `eval()` and `with` cheat the lexical scope, and they completely cancel the optimization that JS does during the compilation phase and there is no getting around the fact that without the optimizations, code runs slower
+
+____________________________________________________________________
+____________________________________________________________________
+
+## Function Versus Block Scope
+
+Scope consists of a series of bubbles, that each act as a container, in which identifiers (variables, functions) are declared
+
+But what exactly makes a new bubble? Is it only the function?
+
+### Scope From Functions
+
+JS has function-based scope, each function you declare creates a bubble for itself
+
+```js
+  function foo(a) {
+    var b = 2;
+
+    // some code
+
+    function bar() {
+      // ....
+    }
+
+    var c = 3;
+  }
+```
+
+- The scope bubble for `foo(...)` includes identifiers `a`, `b`, `c`, and `bar`. It doesn't matter where in the scope a declaration appears, the variable or function belongs to the containing scope bubble
+
+- `bar(..)` has its own scope bubble, so does the global scope, which has just one identifier attached to it `foo`
+
+- Function scope encourages the idea that all variables belongs to the function, and can be used an reused throughout the entirety of the function (and indeed, accessible even to nested scope)
+
+  - This design approach can be quite useful, and certainly can make full use of the dynamic nature of JS variables to take on values of different types as needed
+
+  - If you don't take careful precautions, variables existing across the entirety of a scope can lead to some unexpected pitfalls
+
+### Hiding in Plain Scope
+
+The software design principle _Principle of Least Privilege_, also sometimes called Least Authority or Least Exposure
+
+This principle states that in the design of software, such as the API for a module/object you should expose only what is minimally necessary and hide everything else
+
+```js
+  function doSomething(a) {
+    b = a + doSomethingElse(a*2)
+    console.log(b*3)
+  }
+
+  function doSomethingElse(a) {
+    return a-1
+  }
+
+  var b;
+  doSomething(2) //15
+```
+
+- `b` and `doSomethingElse(..)` are likely private details of how `doSomething(..)` does its job
+
+- Giving the enclosing scope access to `b` and `doSomethingElse(...)` is unnecessary and dangerous as they may be used in unexpected ways
+
+```js
+  function doSomething(a) {
+    function doSomethingElse(a) {
+      return a-1
+    }
+
+    var b;
+    b = a + doSomethingElse(a*2)
+    console.log(b*3)
+  }
+
+  doSomething(2) // 15
+```
+
+- `b` and `doSomethingElse(...)` are not accessible to any outside influence
+
+### Global namespaces
+
+An example of likely variable collision occurs in the global scope, multiple libraries loaded into your program can quite easily collide with each other
+
+Such libraries typically will create a single variable declaration, often an object, with a sufficiently unique name in the global scope
+
+This object is then used as a namespace for that library, where all specific exposures of functionality are made as properties off that object(namespace), rather than as top-level lexically scoped identifiers
+
+```js
+  var MyLibrary = {
+    awesome: "stuff",
+    doSomething: function() {
+      //...
+    },
+    doAnother: function() {
+      //...
+    }
+  }
+```
+
+### Module management
+
+Another option for collision avoidance is the more modern `module` approach, using any of various dependency managers, using these tools, no libraries ever add any identifiers to the global scope, but are instead required to have their identifiers be explicitly imported into another specific scope through usage of the dependency managers various mechanisms
+
+____________________________________________________________________
+____________________________________________________________________
+
+## Function as Scopes
+
+We can take any snippet of code and wrap a function around it, and that effectively hides any enclosed variable or function declaration from the outside scope inside that functions inner scope
+
+```js
+  var a=2
+
+  function foo() {
+    var a=3
+    console.log(a) // 3
+  }
+
+  foo()
+  console.log(a) // 2
+```
+
+This technique works, it is not necessarily very ideal
+
+1. We have to declare a named-function `foo()`, which means that the identifier `foo` itself pollutes the enclosing scope (global in this case)
+
+2. We have to explicitly call the function by name (`foo()`) so that the wrapped code actually executes
+
+3. It would be more ideal if the function didn't need a name (or rather, the name didn't pollute the enclosing scope) and if the function could automatically be executed
+
+```js
+  var a=2
+
+  (function foo() {
+    var a=3
+    console.log(a) // 3
+  })() // Immediately Invoked Function Expression
+
+  console.log(a) // 2
+```
+
+1. With the Immediately Invoked Function Expression, instead of treating the function as a standard declaration,the function is treated as a function expression
+
+    - In the first snippet, the name `foo` is bound in the enclosing scope and we call it directly with `foo()`
+
+    - In the second snipper, the name `foo` is not bound in the enclosing scope but instead is bound only inside of its own function
+
+        - `(function foo() {...})` as an expression means the identifier `foo` is found _only_ in the scope where the `...` indicates, not in the outer scope
+
+        - Hiding the name `foo` inside itself means it does not pollute the enclosing scope unnecessarily
+
+### Anonymous Versus Named
+
+Function expressions are most often used as callback parameters as
+
+```js
+setTimeOut( function() {
+  console.log("Wait")
+}, 1000);
+```
+
+This is called an anonymous function expression because `function()...` has no name identifier on it, however they have several drawbacks to consider
+
+1. Have no useful name to display in stack traces, make debugging harder
+
+2. Without a name, if the function needs to refer to itself, for recursion, etc, the deprecated `arguments.callee` reference is required
+
+    - Another example of self-reference is when an event handler function wants to unbind itself after it fires
+
+3. A name is often helpful in providing more readable/understandable code, helps self-document the code in question
+
+_Inline function expressions_ are powerful and useful, providing a name for your function expression addresses all these drawbacks and has no tangible downsides. The best practice is to always name your function expressions
+
+```js
+setTimeOut( function timeOutHandler() {
+  console.log("Wait")
+}, 1000)
+```
+
+### Invoking Function Expressions Immediately
+
+```js
+  var a=2
+
+  (function foo() {
+    var a=3
+    console.log(a) // 3
+  })() // Immediately Invoked Function Expression IIFE
+
+  console.log(a) // 2
+```
+
+1. The first enclosing `()` pair makes the _function an expression_
+2. The second enclosing `()` executes the function
+3. Naming and IIFE has all the benefits over anonymous functions expressions
+
+There is a slight variation on the traditional IIFE form, which some prefer
+
+> (function(){...})()
+> (function(){...}())
+
+1. In the first form
+
+    - The function expressions is wrapped in `()` and then the invoking `()` pair is on the outside right after it
+
+2. In the second form
+
+    - The invoking `()` pair is moved to the inside of the outer `()` wrapping pair
+
+3. These 2 forms are identical in functionality, it's purely a stylistic choice
+
+Another variation on IIFEs is to use the fact that they are just function calls and pass in arguments
+
+```js
+  var a=2
+
+  (function IIFE(global) {
+
+    var a=3
+    console.log( a ) // 3
+    console.log( global.a ) // 3
+
+  })( window ) // Immediately Invoked Function Expression IIFE
+
+  console.log(a) // 2
+```
+
+1. We pass the `window` object reference and name the parameter `global` so we have a clear delineation between global and non global references
+
+Another variation of the IIFE inverts the order of things
+
+- The function to execute is given _second_, after the invocation and parameters to pass it
+
+- This pattern is used in the UMD (Universal Module Definition) project
+
+```js
+  var a=2
+
+  (function IIFE(def){
+    def(window)
+  })(function def(global){
+
+    var a=3
+    console.log(a) // 3
+    console.log(global.a) // 2
+  })
+```
+
+1. The `def` _function expression_ is defined in the second-half of the snippet and then passed as a _parameter_ (also called def) to the IIFE function defined in the first half of the snippet
+
+2. The parameter `def` (the function) is invoked, passing `window` as the `global` parameter
+
+## Blocks as Scopes
+
+When considering blocks on JS, they usually declare variables as global (pre ES6 when we had no `let` and `const`), on the surface JS has no facility for block scope until you dig a little further
+
+### with
+
+`with` is an example of (a form of) block scope, in that the scope that is created from the object only exists for the lifetime of that `with` statement and not in the enclosing scope
+
+### try/catch
+
+JS in ES3 specified the variable declaration in the _catch_ of a `try/catch` to be block-scoped to the _catch_ block
+
+```js
+try {
+  undefined();
+} catch (err){
+  console.log(err) //works
+}
+
+console.log( err ) // ReferenceError
+```
+
+- `err` exist only in the `catch` and throws an error when you try to reference it elsewhere
+- Many linters still complain if you have 2 or more `catch` clauses in the same scope that each declare their error variable with the same identifier name
+
+  - This is not a redefinition, since variables are safely block-scoped
+  - To avoid this unnecessary warnings, call them `err1`,`err2`, etc
