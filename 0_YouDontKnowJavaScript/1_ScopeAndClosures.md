@@ -586,3 +586,52 @@ console.log( err ) // ReferenceError
 
   - This is not a redefinition, since variables are safely block-scoped
   - To avoid this unnecessary warnings, call them `err1`,`err2`, etc
+
+### let
+
+ES6 introduces a new keyword `let` which sits alongside `var` as another way to declare variables
+
+`let` attaches the variable declaration to the scope of whatever block (commonly a `{...}` pair) it's contained in
+
+```js
+  var foo = true
+
+  if (foo) {
+    let bar = foo * 2
+    bar = something(bar)
+    console.log(bar)
+  }
+
+  console.log(bar) // ReferenceError
+```
+
+Creating explicit blocks for block-scoping can make more obvious where variables are attached and not
+
+Usually, explicit code is preferable over implicit or subtle code, explicit block-scoping is easy to achieve and fits more naturally with how bloc-scoping works in other languages
+
+```js
+  var foo = true
+
+  if (foo) {
+    { // EXPLICIT BLOCK
+      let bar = foo * 2
+      bar = something(bar)
+      console.log(bar)
+    }
+  }
+
+  console.log(bar) // ReferenceError
+```
+
+Hoisting is about declarations being taken as existing for the entire scope in which they occur
+
+Declarations made with `let` will not hoist to the entire scope of the block they appear in. Such declarations will not observably _exists_ in the block until the declaration statement
+
+```js
+{
+  console.log(bar) // ReferenceError
+  let bar = 2
+}
+```
+
+#### Garbage collection
