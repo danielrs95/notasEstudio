@@ -635,3 +635,135 @@ Declarations made with `let` will not hoist to the entire scope of the block the
 ```
 
 #### Garbage collection
+
+Another reason block-scoping is useful relates to closures and garbage collection to reclaim memory, consider
+
+```js
+function process(data) {
+  // do something interesting
+}
+
+var someReallyBigData = { .. };
+
+process( someReallyBigData );
+
+var btn = document.getElementById( "my_button" );
+
+btn.addEventListener( "click", function click(evt){
+  console.log("button clicked");
+}, /*capturingPhase=*/false );
+```
+
+1. The `click` function click handler callback doesn't need the `someReallyBigData` variable at all
+
+    - That means, after `process(..)` runs, the big memory-heavy, data structure could be garbage collected
+
+    - It's quite likely that the JS engine will still have to keep the structure around since the `click` function has a closure over the entire scope
+
+    - Block-scoping can address this concern, making it clearer to the engine that it does not need to keep `someReallyBigData` around
+
+```js
+function process(data) {
+  // do something interesting
+}
+
+// Anything declared inside this block can go away after
+{
+  var someReallyBigData = { .. };
+  process( someReallyBigData );
+}
+
+var btn = document.getElementById( "my_button" );
+
+btn.addEventListener( "click", function click(evt){
+  console.log("button clicked");
+}, /*capturingPhase=*/false );
+```
+
+#### let loops
+
+```js
+for (let i=0; i<10; i++) {
+  console.log(i)
+}
+
+console.log(i) // ReferenceError
+```
+
+- `let` in the `for` loop header bind the `i` to the `for` loop body
+- It rebinds it to each iteration of the loop, making sure to reassign it the value from the end of the previous loop iteration
+
+Here's another way of illustrating the per-iteration binding behavior that occurs
+
+```js
+{
+  let j;
+  for (j=0; j<10; j++) {
+    let i=j; // re-bound for each iteration!!
+    console.log(i)
+  }
+}
+```
+
+Because `let` declarations attach to arbitrary blocks rather than to the enclosing functions scope (or global) there can be gotchas where existing code has a hidden reliance on function-scoped `var` declarations and replacing `var` with `let` may require additional care
+
+```js
+  var foo = true, baz = 10;
+
+  if (foo) {
+    var bar = 3;
+
+    if (baz > bar) {
+      console.log( baz )
+    }
+
+    // ...
+  }
+```
+
+This code is fairly easily refactored as
+
+```js
+var foo = true, baz = 10;
+
+if (foo) {
+  var bar = 3;
+}
+
+if (baz > bar) {
+  console.log(baz)
+}
+```
+
+But, be careful of such changes when using block-scoped variables
+
+```js
+var foo = true, baz=10;
+
+if (foo) {
+  let bar = 3;
+
+  if (baz>bar) { // don't forget `bar` when moving
+    console.log(baz)
+  }
+}
+```
+
+### const
+
+In addition to `let`, ES6 introduces `const` which also creates a block-scoped variable, but whose value is fixed. Any attempt to change that value at a later time results in an error
+
+```js
+var foo = true;
+
+if (foo) {
+  var a = 2
+  const b = 3 // block-scoped to the containing if
+
+  a = 3
+  b = 4 // error
+}
+
+console.log( a ) // 3
+console.log( b ) // ReferenceError!
+```
