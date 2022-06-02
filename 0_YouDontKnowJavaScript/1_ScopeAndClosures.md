@@ -767,3 +767,599 @@ if (foo) {
 console.log( a ) // 3
 console.log( b ) // ReferenceError!
 ```
+
+____________________________________________________________________
+____________________________________________________________________
+
+## 4. Hoisting
+
+Variables are attached to different levels of scope depending on where and how they are declared
+
+Function scope and block scope behave by the same rules in this regard: any variable declared within a scope is attached to that scope
+
+But there's a subtle detail of how scope attachment works with declarations that appear in various locations within a scope
+
+### Chicken or the Egg?
+
+There's a temptation to think that all of the code you see in a JS program is interpreted line-by-line, top-down in order, as the program executes
+
+While that is substantially true, there's one part of that assumption that can lead to incorrect thinking about your program
+
+```js
+a = 2;
+
+var a;
+
+console.log( a );
+```
+
+- Many would expect `undefined`, since the `var a` statement comes after the `a=2`. However, the output will be 2
+
+```js
+console.log( a );
+
+var a = 2;
+```
+
+- In this case, `undefined` is the output
+
+What's going on here? It would appear we have a chicken-and-the-egg question
+
+Which come first, de declaration (egg) or the assignment (chicken)
+
+### The Compiler Strikes Again
+
+Part of the compilation phase is to find and associate all declarations with their appropriate scopes
+
+The best way to think about things is that all declarations, both variables and functions, are processed first, before any part of the code is executed
+
+When you see `var a = 2;` you see it as one statement, but JS actually thinks of it as two statements:
+
+> var a;
+> a = 2;
+
+The first statement, the _declaration_ is processed during the _compilation phase_
+
+The second statement, the _assignment_ is left in place for the _execution phase_
+
+Going back to our first snippet, we should though of as being handled like this
+
+```js
+var a;
+a = 2;
+console.log(a)
+```
+
+Similarly, our second snipper
+
+```js
+var a;
+console.log(a)
+a = 2
+```
+
+Variables and functions _declarations_ are "moved" from where they appear in the flow of the code to the top of the code, this gives rise to the name _hoisting_
+
+In other words the egg (_declaration_) comes before the chicken (_assignment_)
+
+Only the declarations themselves are hoisted, while any assignments or other executable logic are left in place
+
+```js
+foo ();
+
+function foo() {
+  console.log( a ) // undefined
+  var a = 2
+}
+```
+
+The function `foo` declaration (which in this case includes the implied value of it as an actual function) is hoisted, such that the call on the first line is able to execute
+
+Hoisting is per-scope, the `foo(...)` function exhibits that the `var a` is hoisted to the top of the definition. The program can perhaps be more accurately interpreted as
+
+```js
+function foo() {
+  var a
+  console.log( a ) // undefined
+  a = 2
+}
+
+foo ();
+```
+
+Function declarations are hoisted, as we just saw. But function expressions are not
+
+```js
+foo() // not ReferenceError but TypeError
+
+var foo = function bar() { ... }
+```
+
+1. The variable identifier `foo` is hoisted and attached to the enclosing scope (global) of this program
+
+    - `foo()` doesn't fail as a `ReferenceError`
+    - `foo` has no value yet (as it would if it had been a true function declaration instead of a expression)
+    - `foo()` is attempting to invoke the `undefined` value, which is a `TypeError` illegal operation
+
+2. Recall that even though it's a named function expression, the name identifier is not available in the enclosing scope
+
+```js
+foo(); // TypeError
+bar(); // ReferenceError
+
+var foo = function bar() {
+  // ...
+}
+```
+
+This snippet is more accurately interpreted with hoisting as
+
+```js
+var foo;
+
+foo(); // TypeError
+bar(); // ReferenceError
+
+foo = function() {
+  var bar = ...self...
+  //...
+}
+```
+
+### Function First
+
+Las declaraciones de funciones y variables son hoisted, es decir, movidas al inicio del código, pero hay un detalle, las funciones toman prioridad sobre las variables
+
+```js
+foo(); // 1
+var foo;
+
+function foo() {
+  console.log(1)
+}
+
+foo = function() {
+  console.log(2);
+}
+```
+
+The engine interpreted the code as
+
+```js
+function foo() {
+  console.log(1)
+}
+
+foo() // 1
+
+foo = function() {
+  console.log(2)
+}
+```
+
+- `var foo` was a declaration duplicated and thus _ignored_
+- Even though `var foo` was before the `function foo()` declaration, function declarations take priority
+
+While multiple/duplicate `var` declarations are effectively ignored, subsequent function declarations _override_ previous ones
+
+```js
+foo(); // 3
+
+function foo() {
+  console.log(1)
+}
+
+var foo = function() {
+  console.log(2);
+}
+
+function foo() {
+  console.log(3)
+}
+```
+
+This highlights the fact that duplicate definitions in the same scope are a really bad idea and will often lead to confusing results
+
+Function declarations that appear inside of normal blocks typically hoist to the enclosing scope, rather than being conditional as this code implies
+
+```js
+foo(); // "b"
+var a = true
+
+if (a) {
+  function foo() { console.log("a") }
+} else {
+  function foo() { console.log("b") }
+}
+```
+
+## 5. Scope Closure
+
+Closure is when a function is able to remember and access its lexical scope even when that function is executing outside its lexical scope
+
+```js
+function foo() {
+  var a = 2;
+
+  function bar() {
+    console.log(a) // 2
+  }
+
+  bar()
+}
+
+foo()
+```
+
+1. This code should look familiar from our nested scope
+    - Function `bar()` has access to `a` because of lexical scope look-up rules
+
+2. Is this closure? technically, perhaps. The most accurate way to explain `bar()` referencing `a` is via lexical scope look-up rules, and those rules are only an important part of what closure is
+
+3. From a purely academic perspective, what is said of the above snipper is that the function `bar()` has a _closure_ over the scope of `foo()` (and indeed, even over the rest of the scopes)
+
+    - Put slightly differently, it's said that `bar()` _closes_ over the scope of `foo()`
+
+    - Why? Because `bar()` appears nested inside `foo()`. Plain and simple
+
+Closure defined in this way is not directly observable, nor do we se closure exercised in that snippet, we see lexical scope
+
+```js
+function foo() {
+  var a = 2;
+
+  function bar() {
+    console.log(a) // 2
+  }
+
+  return bar;
+}
+
+var baz = foo()
+baz(); // Closure was just observed!
+```
+
+1. The function `bar()` has lexical scope access to the inner scope of `foo()`
+
+2. We take `bar()`, the function itself and pass it as a value, we _return_ the function object itself that `bar` references
+
+3. After we execute `foo()` we assign the value it returned (the `bar()` function) to a variable called `baz`
+
+    - Then we invoke `baz()` which of course is invoking our inner function `bar()`
+
+4. `bar()` is executed, but in this case, executed _outside_ of its declared lexical scope
+
+5. After `foo()` executed, normally we would expect that the entirety of the inner scope of `foo()` go away because of the garbage collector
+
+6. The "magic" of closures does not let this happen, the inner scope is in fact _still_ in use, and does not go away. `bar()` is still using it
+
+7. By virtue of where it was declared, `bar()` has a lexical scope closure over the inner scope of `foo()` which keeps that scope alive for `bar()` to reference at any later time
+
+8. `bar()` still has a reference to that scope, and that reference is called _closure_
+Pero
+9. When `baz` is invoked (thus invoking `bar()`) it has access to author-time lexical scope, so it can access `a`
+
+10. The function is being invoked well outside of its author-time lexical scope. _Closure_ lets the function continue to access the lexical scope it was defined in at author time
+
+Any of the various ways that functions can be passed around as values, and indeed invoked in other locations, all are _examples_ of observing/exercising closure
+
+```js
+function foo() {
+  var a = 2;
+
+  function baz() {
+    console.log(a); // 2
+  }
+
+  bar(baz);
+}
+
+function bar(fn) {
+  fn(); // Exercising the closures
+}
+```
+
+1. We pass the inner function `baz` over to `bar`
+2. Call that inner function (labeled now `fn`)
+3. When we do the call, it's closure over `foo()` is observed by accessing `a`
+
+Passing can be indirect
+
+```js
+var fn
+
+function foo() {
+  var a = 2;
+
+  function baz() {
+    console.log(a)
+  }
+
+  fn = baz; // Assign baz to global variable
+}
+
+function bar() {
+  fn(); // look ma, I saw closure
+}
+
+foo();
+bar(); // 2
+```
+
+However we transport an inner function outside of its lexical scop, it will maintain a scope reference to where it was originally declared and wherever we execute him, that closure will be exercised
+
+### Examples
+
+```js
+function wait(message) {
+
+  setTimeout( function timer() {
+    console.log(message);
+  }, 1000);
+}
+
+wait("Hello, closure!");
+```
+
+1. We take an inner function (`timer`) and pass it to `setTimeout(..)`
+2. `timer` has a scope closure over the scope of `wait(..)` keeping and using a reference to the variable `message`
+
+3. 1000 milliseconds after we have executed `wait(..)` and its inner scope should otherwise be gone, that anonymous function still has closure over that scope
+
+4. Deep in the engine
+
+    - The built-in utility `setTimeOut(...)` has reference to some parameter (fn, or func, or something like that)
+    - Engine invokes that function which is invoking our inner `time` and the lexical scope is still intact
+
+### Loops and Closure
+
+The most common example used to illustrate closure involves `for` loop
+
+```js
+for (var i=1; i<=5; i++){
+  setTimeout( function timer(){
+    console.log(i)
+  }, i*1000)
+}
+```
+
+- The idea of this code is to print the number 1 to 5, one at a time, one per second, respectively
+
+- If you run the code you get 6, printed five times at 1 time intervals
+
+    1. The 6 comes from the terminating condition of the loop, when 6 > 5
+    2. The timeout callback function (`timer`) are all running well after the completion of the loop
+
+- We are trying to _imply_ that each iteration of the loop _captures_ it's own copy of `i` at the time of iteration
+
+  - The way scope works, all five of those functions, though they are defined separately in each loop iteration
+  - _Are closed over the same shared global scope_, in fact, only one `i` in it
+
+- Something about loop structure tends to confuse us into _thinking_ there's something else more at work, there's no difference than if each of the five timeout callbacks were just declared one right after the other, with no loop at all
+
+- We _NEED_ more closured scope, we need a new closured scope for each iteration of the loop with a IIFE, remember, IIFE creates scope by declaring a function an immediately executing it
+
+```js
+for (var i=1; i<=5; i++){
+  (function (){
+    setTimeout( function timer(){
+      console.log(i)
+    }, i*1000)
+  })()
+}
+```
+
+- This still doesn't work
+
+  - Each timeout function callback is indeed closing over its own per-iteration scope created by each IIFE
+
+  - It's not enough to have a scope to close over _if that scope is empty_
+
+  - Our IIFE is just an empty do-nothing scope, it needs something in it to be useful of us
+
+  - It needs its own variable, with a copy of the `i` value at each iteration
+
+```js
+for (var i=1; i<=5; i++){
+  (function (){
+    var j = i
+    setTimeout( function timer(){
+      console.log(j)
+    }, j*1000)
+  })()
+}
+```
+
+A slight variation some prefer
+
+```js
+for (var i=1; i<=5; i++){
+  (function (j){
+    setTimeout( function timer(){
+      console.log(j)
+    }, j*1000)
+  })(i)
+}
+```
+
+- Since these IIFE are just function, we can pass in `i` and we can call it `j` if we prefer, or even `i` again
+
+- The IIFE inside each iteration created a new scope for each iteration
+
+  - This gave our timeout function callbacks the opportunity to close over a new scope for each iteration
+  - This new scope had a variable with the right per-iteration value in it for us to access
+
+#### Block Scoping Revisited
+
+We used an IIFE to create a new scope per-iteration, we created a new scope per-iteration.
+
+Remember `let` hijacks a block and declares a variable right there in the block
+
+Essentially turns a block into a scope that we can close over, so the following code works
+
+```js
+for (var i=1; i<=5; i++) {
+  let j=i
+  setTimeout( function timer() {
+    console.log(j)
+  }, j*1000)
+}
+```
+
+There's a special behavior for `let` declarations used in the head of a `for` loop.
+
+The variable will be declared not just once, but _each iteration_. And it will be initialized at each subsequent iteration with the value from the end of the previous iteration
+
+```js
+for (let i=1; i<=5; i++) {
+  setTimeout( function timer() {
+    console.log(i)
+  }, i*1000)
+}
+```
+
+### Modules
+
+There are other code patterns that leverage the power of closure but that do not on the surface appear to be about callbacks, like the _module_
+
+```js
+function CoolModule() {
+  var something = 'cool';
+  var another = [1,2,3];
+
+  function doSomething() {
+    console.log(something)
+  };
+
+  function doAnother() {
+    console.log(another.join(" ! "));
+  };
+}
+```
+
+- We simply have some private data variables `something` and `another` and a couple of inner functions `doSomething()` and `doAnother()` which bot have lexical scope (and thus closure!) over the inner scope of `foo()`
+
+```js
+function CoolModule() {
+  var something = 'cool';
+  var another = [1,2,3];
+
+  function doSomething() {
+    console.log(something)
+  };
+
+  function doAnother() {
+    console.log(another.join(" ! "));
+  };
+
+  return {
+    doSomething: doSomething,
+    doAnother: doAnother,
+  };
+}
+
+var foo = CoolModule();
+foo.doSomething(); // cool
+foo.doAnother(); // 1 ! 2 ! 3
+```
+
+- This pattern in JS is called _module_, the most common way of implementing is called _revealing module_ and it's the variation above
+
+- `CoolModule()` is a function, but _it has to ve invoked_ for there to be a module instance created
+
+- `CoolModule()` return an object, this object has references on it to our inner functions
+  - But not to our inner data variables, we keep those hidden an private
+  - It's appropriate to think of this object as a _public API for our module_
+  - This object return value is ultimately assigned to the outer variable foo and then we can access those methods on the API
+
+- It's not required that we return an actual object, we could just return back an inner function directly
+
+- `doSomething()` and `doAnother()` have closure over the inner scope of the module instance
+
+There are 2 requirements for the module pattern to be exercised
+
+1. There must be an outer enclosing function and it must be invoked at least once (each time creates a new module instance)
+
+2. The enclosing function must return back at least one inner function, so that this inner function has closure over the private scope and can access and/or modify that private state
+
+An object with a function property on it alone is not a module
+
+An object that is returned from a function invocation that only has data properties on it and no closured functions is not really a module
+
+A slight variation of this pattern when you only care to have one instance, a singleton of sorts
+
+```js
+var foo = (function CoolModule() {
+  var something = 'cool';
+  var another = [1,2,3];
+
+  function doSomething() {
+    console.log(something)
+  };
+
+  function doAnother() {
+    console.log(another.join(" ! "));
+  };
+
+  return {
+    doSomething: doSomething,
+    doAnother: doAnother,
+  };
+})()
+
+foo.doSomething(); // cool
+foo.doAnother(); // 1 ! 2 ! 3
+```
+
+- We turned the module function into an IIFE, immediately invoked it and assigned its return value directly to our single module instance identifier `foo`
+
+Modules are just functions so they can receive parameters
+
+```js
+function CoolModule(id) {
+  function identify() {
+    console.log(id);
+  }
+
+  return {
+    identify: identify
+  }
+}
+
+var foo1 = CoolModule("foo1")
+foo1.identify() // foo 1
+```
+
+Another slight but powerful variation on the module pattern is to name the object you are returning as your public API
+
+```js
+var foo = (function CoolModule(id) {
+  function change() {
+    // modifying the public API
+    publicAPI.identify = identify2;
+  }
+
+  function identify1() {
+    console.log( id );
+  }
+
+  function identify2() {
+    console.log( id.toUpperCase() );
+  }
+
+  var publicAPI = {
+    change: change,
+    identify: identify1
+  };
+
+  return publicAPI;
+})( "foo module" );
+
+foo.identify(); // foo module
+foo.change();
+foo.identify(); // FOO MODULE
+```
+
+1. By retaining an inner reference to the public API object inside your module instance, you can modify that module instance _from the inside_, including adding and removing methods and properties, and changing their values
+
+#### Modern Modules
