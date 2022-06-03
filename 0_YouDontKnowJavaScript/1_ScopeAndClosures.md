@@ -7,8 +7,8 @@ One of the most fundamental paradigms of nearly all programming languages is the
 
 These questions speak to the need for a well-defined set of rules for storing variables in some location, and for finding those variables at a later time. We'll call that set of rules _scope_
 
-____________________________________________________________________
-____________________________________________________________________
+-------------------------------
+-------------------------------
 
 ## Compiler theory
 
@@ -49,8 +49,8 @@ In traditional compiled-languages process your code will undergo typically 3 ste
 
     We'll just handwave and say there's a way to take our previously described AST for `var a = 2;` and turn it into a set of machine instructions to actually create a variable called a (including reserving memory,etc) and then store a value into a
 
-____________________________________________________________________
-____________________________________________________________________
+-------------------------------
+-------------------------------
 
 ## Understanding Scope
 
@@ -156,8 +156,8 @@ foo(2);
 
 3. As explained early, when we use the `console.log(a)` there is a _RHS_ look up
 
-____________________________________________________________________
-____________________________________________________________________
+-------------------------------
+-------------------------------
 
 ## Nested Scope
 
@@ -204,8 +204,8 @@ _ReferenceError_ is scope resolution-failure related
 
 _TypeError_ implies that scope resolution was successful, but that there was an illegal/imposible action attempted against the result
 
-____________________________________________________________________
-____________________________________________________________________
+-------------------------------
+-------------------------------
 
 ## Lexical Scope
 
@@ -309,8 +309,8 @@ The other frowned-upon (and now deprecated!) feature in JS that cheats lexical s
 
 Both `eval()` and `with` cheat the lexical scope, and they completely cancel the optimization that JS does during the compilation phase and there is no getting around the fact that without the optimizations, code runs slower
 
-____________________________________________________________________
-____________________________________________________________________
+-------------------------------
+-------------------------------
 
 ## Function Versus Block Scope
 
@@ -410,8 +410,8 @@ This object is then used as a namespace for that library, where all specific exp
 
 Another option for collision avoidance is the more modern `module` approach, using any of various dependency managers, using these tools, no libraries ever add any identifiers to the global scope, but are instead required to have their identifiers be explicitly imported into another specific scope through usage of the dependency managers various mechanisms
 
-____________________________________________________________________
-____________________________________________________________________
+-------------------------------
+-------------------------------
 
 ## Function as Scopes
 
@@ -768,8 +768,8 @@ console.log( a ) // 3
 console.log( b ) // ReferenceError!
 ```
 
-____________________________________________________________________
-____________________________________________________________________
+-------------------------------
+-------------------------------
 
 ## 4. Hoisting
 
@@ -1363,3 +1363,192 @@ foo.identify(); // FOO MODULE
 1. By retaining an inner reference to the public API object inside your module instance, you can modify that module instance _from the inside_, including adding and removing methods and properties, and changing their values
 
 #### Modern Modules
+
+Various module dependency loaders/managers essentially wrap up the module pattern into a friendly API
+
+- Primero veamos como se guardaría sin dependencias
+
+```js
+var MyModules = (function Manager() {
+  var modules = {};
+
+  function define(name,impl) {
+    modules[name] = impl();
+  }
+
+  function get(name) {
+    return modules[name];
+  }
+
+  return {
+    define : define,
+    get: get
+  };
+})();
+
+MyModules.define("bar",function() {
+  function hello(who) {
+    return "Let me introduce: " + who;
+  }
+
+  return {
+    hello : hello
+  };
+})
+
+var bar = MyModules.get("bar");
+
+console.log(bar.hello("hippo"));
+```
+
+```js
+var MyModules = (function Manager() {
+  var modules = {};
+
+  function define(name, deps, impl) {
+    for (var i=0; i<deps.length; i++) {
+      deps[i] = modules[deps[i]];
+    }
+    modules[name] = impl.apply( impl, deps );
+    // modules[name] = impl.apply( null, deps ); // Also works
+  }
+
+  function get(name) {
+    return modules[name];
+  }
+  return {
+    define: define,
+    get: get
+  };
+})();
+```
+
+1. The key part of this code is
+
+    > modules[name] = impl.apply(imp,deps)
+
+    Se envía la misma referencia de imp (la función que va a contener el scope con el modulo que queremos definir) para enviar el `this` de la misma función
+
+    Básicamente, usamos `apply` para enviarle todas las dependencias.
+
+    Si no existieran dependencias el código podría ser
+
+    > modules[name] = impl();
+
+    Para evitar confusiones con la misma función enviándose, se podría escribir como
+
+    > modules[name] = impl.apply(null,deps);
+
+2. This part is invoking the definition wrapper function for a module
+
+    - Passing any dependencies
+    - Storing the return value, the modules API, into an internal list of modules tracked by name
+
+Here is how you use it to define some modules
+
+```js
+MyModules.define("bar", [], function() {
+  function hello(who) {
+    return "Let me introduce: " + who;
+  }
+
+  return {
+    hello: hello
+  }
+});
+
+MyModules.define("foo", ["bar"], function(bar) {
+  var hungry = "hippo"
+
+  function awesome() {
+    console.log( bar.hello(hungry).toUpperCase() )
+  }
+
+  return {
+    awesome: awesome
+  }
+});
+
+var bar = MyModules.get("bar")
+var foo = MyModules.get("foo")
+
+console.log(
+  bar.hello("hippo") // Let me introduce: hippo
+)
+
+foo.awesome() // LET ME INTRODUCE: HIPPO
+```
+
+1. Both "foo" and "bar" _modules_ are defined with a function that returns a public API
+    - "foo" receives the instance of "bar" as a dependency parameter and can use it accordingly
+
+2. There's no magic to module managers
+    - They fulfill both characteristics of the module-pattern:
+      1. Invoking a function definition wrapper
+      2. Keeping its return value as the API for that module
+
+#### Future Modules
+
+ES6 adds first-class syntax support for the concept of modules
+
+When loaded via the module system, ES6 treats a file as a separate module. Each module can both import other modules or specific API members as well export their own public API members
+
+- Function-based modules aren't statically recognized pattern (something the compilers knows about). So their API semantics aren't considered until runtime
+  - You can actually modify a module's API during the runtime as we see above
+
+- ES6 module API' are static (the APIs don't change at runtime)
+
+  - Since the compiler knows that it can check during compilation that a reference to a member of an imported modules API actually exists
+
+  - If the API references doesn't exist the compiler throws an "early" error at compile time
+
+ES6 modules do not have an inline format, they must be defined in separate files. The browser/engines have a default module loader which synchronously loads a module file when it's imported
+
+> bar.js
+
+```js
+function hello(who) {
+  return "Let me introduce: " + who;
+}
+
+export hello;
+```
+
+> foo.js
+
+```js
+// import only `hello()` from the "bar" module
+import hello from "bar";
+
+var hungry = "hippo"
+
+function awesome() {
+  console.log(
+    hello(hungry).toUpperCase()
+  )
+}
+
+export awesome
+```
+
+> baz.js
+
+```js
+// import the entire "foo" and "bar" modules
+module foo from "foo";
+module bar from "bar";
+
+console.log(
+  bar.hello("rhino")
+)// Let me introduce: rhino
+
+foo.awesome(); // LET ME INTRODUCE: HIPPO
+```
+
+1. _imports_ import one or more members from a modules API into the current scope, each to a variable
+
+2. _module_ imports an entire module API to a bound variable (`foo`, `bar` in our case)
+
+3. _export_ exports an identifier (variable, function) to the public API for the current module
+
+These operators can be used _as many times_ in a module's definition as is necessary
