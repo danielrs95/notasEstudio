@@ -619,3 +619,219 @@ console.log( bar.a ); // 2
 
 1. _explicit_ takes precedence over _implicit_ binding
     - You should ask first if _explicit_ applies before checking for _implicit_
+
+#### Determining `this`
+
+We can summarize the rules for determining `this` from a function calls _call-site_, in their order of precedence
+
+Ask these questions in this order, and stop when the first rule applies
+
+1. Is the function called with `new`, if so, `this` is the newly constructed object
+
+    > var bar = new foo()
+
+2. Is the function called with `call` or `apply` (_explicit_) even hidden inside a `bind` hard binding. If so, `this` is the explicitly specified object
+
+    > var bar = foo.call(obj2)
+
+3. Is the function called with a context (_implicit_) object. If so, `this` is that context object
+
+    > var bar = obj1.foo()
+
+4. Otherwise, default the `this`. If in `strict mode` pick `undefined`, otherwise the `global` object
+
+    > var bar = foo()
+
+### Binding Exceptions
+
+#### Ignored this
+
+If you pass `null` or `undefined` as a `this` binding parameter to `call`, `apply`, or `bind` those values are effectively ignored, and instead the _default binding_ rule applies to the invocation
+
+```js
+function foo() {
+  console.log(this.a)
+}
+
+var a = 2;
+foo.call(null) // 2
+```
+
+It's quite common to use `apply(..)` for spreading out arrays of values as parameters to a function call. `bind(...)` can curry parameters (preset values), which can be helpful
+
+```js
+function foo(a,b) {
+  console.log( "a:" + a + ", b:" + b )
+}
+
+// spreading out array as parameters
+foo.apply( null, [2, 3] ); // a:2, b:3
+
+// currying with `bind(..)`
+var bar = foo.bind( null, 2 );
+bar( 3 ); // a:2, b:3
+```
+
+- ES6 has the _spread operator `...`_, which let you syntactically spread out an array as parameters without `apply(...)`
+
+    > foo(...[2,3]) is equal to foo(1,2)
+
+- If you always use `null`, when using third-party libraries functions, it might inadvertently reference (or mutate) the global `object`
+
+##### Safer this
+
+A safer practice is to pass a object for `this` that is guaranteed not to be an object that can create problematic side effects
+
+We create a DMZ (De-militarized zone) object, a completely empty object
+
+The easiest way to set it up as totally empty is `Object.create(null)`, this is similar to {}, but without the delegation to `Object.prototype`
+
+```js
+function foo(a,b) {
+  console.log( "a:" + a + ", b:" + b );
+}
+
+// our DMZ empty object
+var ø = Object.create( null );
+
+// spreading out array as parameters
+foo.apply( ø, [2, 3] ); // a:2, b:3
+
+// currying with `bind(..)`
+var bar = foo.bind( ø, 2 );
+bar( 3 ); // a:2, b:3
+```
+
+#### Indirection
+
+You can intentionally or not create "indirect references" to functions, and in those cases, when that function reference is invoked the _default binding_ rule applies
+
+```js
+function foo() {
+  console.log( this.a );
+}
+
+var a = 2;
+var o = { a: 3, foo: foo };
+var p = { a: 4 };
+
+o.foo(); // 3
+(p.foo = o.foo)(); // 2
+```
+
+1. The _result value_ of the assignment `p.foo = o.foo` is a reference yo just the underlying function object.
+
+    - The effective _call-site_ is just `foo()`, default binding applies
+
+### Lexical this
+
+Normal functions abide by the four rules we just covered. ES6 introduce arrow functions
+
+Arrow functions, don't follow the 4 rules, they adopt the `this` binding from the enclosing (function or global) scope
+
+```js
+function foo() {
+  // return an arrow function
+  return (a) => {
+    // `this` here is lexically inherited from `foo()`
+    console.log(this.a)
+  }
+}
+
+var obj1 = {
+  a: 2
+};
+
+var obj2 = {
+  a:3
+}
+
+var bar = foo.call(obj1);
+bar.call(obj2); // 2, not 3 !
+```
+
+1. The arrow-function crated in `foo()` lexically captures whatever `foo()`s `this` is at its _call-time_
+
+    - Since `foo()` was `this`-bound to `obj1`, `bar` (a reference to the returned arrow-function) will also be bounded to `obj1`
+    - The lexical binding of an arrow function cannot be overridden (even with `new`)
+
+The most common use case is in the use of callbacks, such as event handlers or timers
+
+```js
+function foo() {
+  setTimeout(() => {
+    // `this` here is lexically inherited from `foo()`
+    console.log( this.a );
+  },100);
+}
+
+var obj = {
+  a: 2
+};
+
+foo.call( obj ); // 2
+```
+
+While arrow functions provide an alternative to using `bind(...)` on a function to ensure its `this`, they essentially are disabling the traditional `this` mechanism in favor of more widely understood lexical scoping
+
+Pre-ES6, we already have a fairly common patter for doing so
+
+```js
+function foo() {
+  var self = this; // lexical capture of `this`
+  setTimeout( function(){
+    console.log( self.a );
+  }, 100 );
+}
+
+var obj = {
+  a: 2
+}
+
+foo.call(obj) // 2
+```
+
+1. `self=this` and arrow-functions seem like good solutions to not use `bind(..)` they are fleeing from `this` instead of understanding and embracing it
+
+You should
+
+1. Use only lexical scope and forget the false pretense of `this`-style code
+2. Embrace `this`-style mechanisms completely including using `bind(...)` where necessary and tru to avoid `self=this` and arrow-function lexical tricks
+
+## 3. Objects
+
+### Syntax
+
+Objects come in two forms, the declarative (literal) form and the constructed form
+
+Literal syntax
+
+```js
+var myObj = {
+  key: value
+  // ...
+};
+```
+
+Constructed form
+
+```js
+var myObj = new Object();
+myObj.key = value;
+```
+
+1. The only difference is that you can add one or more key/value pairs on the literal declaration, with constructed-form you must add properties one by one
+
+### Type
+
+Objects are one of the six primary types (called "language types" in the specification) in JS
+
+- `string`
+- `number`
+- `boolean`
+- `null`
+- `undefined`
+- `object`
+
+Note that the simple primitives (string, boolean, number, null and undefined) are not themselves `objects`
+    - Null is sometimes as an object type because of an error, `typeof` null return the string "object". In fact, `null` is its own primitive type
