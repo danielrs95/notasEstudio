@@ -450,3 +450,172 @@ function setTimeout(fn, delay) {
     - Event handlers in JS libraries are quite fond of forcing your callback to have a `this` that points to, for instance, the DOM elements that triggered the event
 
 #### Explicit Binding
+
+All functions have some utilities available to them (via their `[[Prototype]]`), specifically `call(..)` and `apply(...)` methods
+
+This both methods take, as their first parameter, an object to use for the `this` and then invoke the function with that `this` specified.
+
+Since you are directly stating what `this` to be, is called _explicit binding_
+
+```js
+function foo() {
+  console.log( this.a );
+}
+
+var obj = {
+  a: 2,
+  foo: foo
+};
+
+foo.call(obj) // 2
+```
+
+- If you pass a simple primitive value (string, boolean or number) as the `this` binding, the primitive value is wrapped in its objects form (`new String(..)`, `new Boolean(..)`, `new Number(...)`), this is called boxing
+
+- _explicit binding_ alone still doesn't offer any solution to a function losing its intended `this` binding
+
+##### Hard binding
+
+```js
+function foo() {
+  console.log( this.a );
+}
+
+var obj = {
+  a: 2,
+};
+
+var bar = function() {
+  foo.call(obj)
+}
+
+bar() // 2
+setTimeout(bar,100) // 2
+
+// hard-bound `bar` can no longer have its `this` overridden
+bar.call( window ); // 2
+```
+
+1. We create a function `bar()`, internally, manually calls `foo.call(obj)`
+
+    - Forcibly invoking `foo` with `obj` binding for `this`
+    - No matter how you later invoke the function `bar`, it will always invoke `foo` with `obj`
+    - This binding is both explicit and strong, we call it _hard binding_
+
+The most typical way to wrap a function with a _hard binding_ creates a pass-through of any arguments passed and any return value received
+
+```js
+function foo(something) {
+  console.log( this.a, something );
+  return this.a + something
+}
+
+var obj = {
+  a: 2,
+};
+
+var bar = function() {
+  return foo.apply(obj,arguments)
+}
+
+var b = bar(3) // 2 3
+console.log(b) // 5
+```
+
+Another way to express this pattern is to create a reusable helper:
+
+```js
+function foo(something) {
+  console.log( this.a, something );
+  return this.a + something
+}
+
+// simple 'bind' helper
+function bind(fn, obj) {
+  return function() {
+    return fn.apply(obj,arguments)
+  }
+}
+
+var obj = {
+  a: 2,
+};
+
+var bar = bind(foo, obj)
+
+var b = bar(3) // 2 3
+console.log(b) // 5
+```
+
+Since _hard binding_ is such a common patter, it's provided with a built-in utility as of ES5, `Function.prototype.bind`
+
+```js
+function foo(something) {
+  console.log( this.a, something );
+  return this.a + something
+}
+
+var obj = {
+  a: 2,
+};
+
+var bar = foo.bind(obj)
+
+var b = bar(3) // 2 3
+console.log(b) // 5
+```
+
+1. `bind(...)` return a new function that is hardcoded to call the original function with the `this` context set as you specified
+
+##### API call "contexts"
+
+Many libraries functions, and many new built-in functions in JS and host environment, provide an optional parameter usually called "context" which is designed as a work-around for not having to use `bind(..)`
+
+```js
+function foo(el) {
+  console.log( el, this.id );
+}
+
+var obj = {
+  id: "awesome",
+};
+
+// use `obj` as `this` for `foo(..)` calls
+[1, 2, 3].forEach( foo, obj );
+// 1 awesome 2 awesome 3 awesome
+```
+
+1. Internally, these functions almost certainly use _explicit binding_ vial `call(...)` or `apply(...)`
+
+#### new Binding
+
+In JS, constructors are just functions that happen to be called with the `new` operator in front of them.
+    - They are not attached to classes, nor are they instantiating a class
+    - They are not special types of functions
+    - They are just regular functions that are, in essence, hijacked by the use of `new` in their invocation
+
+There's really no such thing as "constructor functions" but rather construction calls of functions
+
+When a function is invoked with `new` in front of it, otherwise known as a _constructor call_
+
+  1. A brand new object is created (aka constructed) out of thin air
+  2. The newly constructed object is `[[Prototype]]` linked
+  3. The newly constructed object is set as the `this` binding for that function call
+  4. Unless the function returns its own alternate object, the new invoked function call will _automatically_ return the newly constructed object
+
+```js
+function foo(a) {
+  this.a = a;
+}
+var bar = new foo( 2 );
+console.log( bar.a ); // 2
+```
+
+1. By calling `foo(...)` with `new` in front of it
+    - We've constructed a new object
+    - Set that new object as the `this` for the call of `foo(..)`
+
+### Everything in Order
+
+1. _explicit_ takes precedence over _implicit_ binding
+    - You should ask first if _explicit_ applies before checking for _implicit_
