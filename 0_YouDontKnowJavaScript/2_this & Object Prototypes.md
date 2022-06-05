@@ -835,3 +835,191 @@ Objects are one of the six primary types (called "language types" in the specifi
 
 Note that the simple primitives (string, boolean, number, null and undefined) are not themselves `objects`
     - Null is sometimes as an object type because of an error, `typeof` null return the string "object". In fact, `null` is its own primitive type
+
+There are a few special object subtypes, which we can refer as _complex primitives_
+
+`function` is a subtype of object (technically, a callable object).
+    - Functions in JS are said to be "first class" they are basically just normal object (with callable behavior semantics bolted on) and they can be handled like any other plain object
+
+Arrays are also a form of objects, with extra behavior. The organization of contents in arrays is slightly more structured than for general objects
+
+#### Built-in Objects
+
+There are other object subtypes, usually referred to as built-in objects
+
+- `String`
+- `Number`
+- `Boolean`
+- `Object`
+- `Function`
+- `Array`
+- `Date`
+- `RegExp`
+- `Error`
+
+These built-ins have the appearance of being actual types, but are actually just built-in functions
+
+- Each of there built-in functions can be used as a constructor (function call with the _new_ operator)
+- With the result being a newly constructed object of the subtype in question
+
+```js
+var strPrimitive = "I am a string";
+typeof strPrimitive; // "string"
+strPrimitive instanceof String; // false
+
+var strObject = new String( "I am a string" );
+typeof strObject; // "object"
+strObject instanceof String; // true
+
+// inspect the object sub-type
+Object.prototype.toString.call( strObject ); // [object String]
+```
+
+1. The primitive value "I'm a string" is not an object, it's a primitive literal and immutable value
+
+    - To perform operations on it, such as checking its length, accessing its individual character contents, etc, a `String` object is required
+
+Luckily, the language automatically coerces a string primitive to a `String` object when necessary, which means you almost never need to explicitly create the `Object` form
+
+It is strongly preferred to use the literal form for a value, where possible, rather than the constructed object form
+
+```js
+var strPrimitive = "I am a string";
+
+console.log( strPrimitive.length ); // 13
+
+console.log( strPrimitive.charAt( 3 ) ); // "m"
+```
+
+1. In both cases, we call a property or method on a string primitive, and the engine automatically coerces it to a `String` object so that the property/method access work
+
+2. The same sort of coercion happens between the number literal primitive `42` and the `new Number(42)` object wrapper. Likewise for `Boolean` objects from "boolean" primitives
+
+3. `null` and `undefined` have no object wrapper form, only their primitive values
+
+4. `Date` values can only be created with their constructed object form, as they have no literal form counterpart
+
+5. `Objects`, `Arrays`, `Functions` and `RegExps` are all objects regardless of whether the literal or constructed form is used
+
+6. `Error` objects are rarely created explicitly in code, but usually created automatically when exceptions are thrown. They can be created with the constructed form `new Error(...)`
+
+### Contents
+
+The contents of an object consist of values (any type) stored at a specifically named locations, which we call properties
+
+The engine stores values in implementation-dependent ways, what is stored in the container are these property names, which act as pointers (technically, references) to where the values are stored
+
+```js
+var myObject = {
+  a: 2
+};
+
+myObject.a; // 2
+myObject["a"]; // 2
+```
+
+1. To access `a` we need either the `.` operator or the `[]` operator.
+    - The `.a` is referred as _property access_
+    - The `["a"]` is referred as _key access_
+    - They both access the same location, and pull the same value
+
+    - The `.` operator requires and `Identifier`-compatible property name after it
+    - The `[".."]` can take any UTF-8/Unicode-compatible string as the name for the property
+
+Since the `["..."]` syntax uses a strings value to specify the location this means the program can programmatically build up the value of the string
+
+```js
+var myObject = {
+  a: 2
+}
+
+var idx;
+
+if (wantA) {
+  idx = "a"
+}
+
+// later
+console.log(myObject[idx]) // 2
+```
+
+In objects, property names are _always_ strings. If you use any other values besides a _string_ as the property, it will first be converted to a string.
+
+```js
+var myObject = { };
+
+myObject[true] = "foo";
+myObject[3] = "bar";
+myObject[myObject] = "baz";
+
+myObject["true"]; // "foo"
+myObject["3"]; // "bar"
+myObject["[object Object]"]; // "baz"
+```
+
+#### Property Versus Method
+
+It´s tempting to think of the functions as belonging to the object, and in other languages, functions that belong to objects (aka "classes") are referred as _methods_
+
+Technically functions never "belong" to objects, saying that a function that happens to be _accessed_ on an object reference is a method is a stretch
+
+Every time you access a property on an object, that is a property access, regardless of the type of value you get back
+
+```js
+function foo() {
+  console.log("foo")
+}
+
+var someFoo = foo;
+
+var myObject = {
+  someFoo: foo
+}
+
+foo; // function foo(){..}
+someFoo; // function foo(){..}
+myObject.someFoo; // function foo(){..}
+```
+
+1. `someFoo` and `myObject.someFoo` are just two separate references to the same function
+
+    - If `foo()` was defined to have a `this` reference inside it, that `myObject.someFoo` _implicit binding_ would be the only observable difference between the 2 references
+
+The safest conclusion is probably that "function" and "method" are interchangeable in JS
+
+
+```js
+var myObject = {
+  foo: function () {
+    console.log("foo")
+  }
+}
+
+var someFoo = myObject.foo
+someFoo; // function foo(){..}
+myObject.foo // function foo(){..}
+```
+
+#### Arrays
+
+Arrays also use the `[]` access form, but as mentioned earlier, they have slightly more structured organization for how and where values are stored.
+
+Arrays assume numeric indexing, at positive integers begin in 0
+
+```js
+var myArray = [ "foo", 42, "bar" ];
+myArray.length; // 3
+myArray[0]; // "foo"
+myArray[2]; // "bar"
+```
+
+Arrays are objects, so even though each index is a positive integer, you can also add properties onto the array
+
+```js
+var myArray = [ "foo", 42, "bar" ];
+myArray.baz = "baz";
+myArray.length; // 3
+myArray.baz; // "baz"
+```
+
+1. Adding named properties (regardless of `.` or `[]` operator syntax) does not change the reported `length` of the array
