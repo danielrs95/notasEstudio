@@ -1023,3 +1023,220 @@ myArray.baz; // "baz"
 ```
 
 1. Adding named properties (regardless of `.` or `[]` operator syntax) does not change the reported `length` of the array
+
+Use objects to store key/value pairs, and arrays to store values at numeric indices
+
+If you try to add a property to an array, but the property name looks like a number, it will end up instead as a numeric index (modifying the array contents)
+
+```js
+var myArray = [ "foo", 42, "bar" ];
+myArray["3"] = "baz";
+myArray.length; // 4
+myArray[3]; // "baz"
+```
+
+#### Duplicating Objects
+
+It's not fully clear what, by default, should be the algorithm for the duplication
+
+```js
+function anotherFunction() { /*..*/ }
+
+var anotherObject = {
+  c: true
+};
+
+var anotherArray = [];
+var myObject = {
+  a: 2,
+  b: anotherObject, // reference, not a copy!
+  c: anotherArray, // another reference!
+  d: anotherFunction
+};
+
+anotherArray.push( anotherObject, myObject );
+```
+
+We should answer if it should be a _shallow copy_ or _deep copy_
+
+1. A _shallow copy_ would end up with `a` on the new object as a copy of the value 2, but the `b`, `c`, and `d` properties as just references to the same places as the references in the original object
+
+2. A _deep copy_ would duplicate not only `myObject` but `anotherObject` and `anotherArray`
+
+    - But `anotherArray` has references to `anotherObject` and `myObject` in it, so those should also be duplicated rather than reference-preserved. Infinite circular duplication problem because of the circular reference
+
+A _shallow copy_ is fairly understandable and has far fewer issues, ES6 has now defined `Object.assign(...)` for this task
+
+- Takes a target object as its first parameter, and one more source objects as its subsequent parameters
+
+- It iterates over all the enumerable owned keys (immediately present) on the source object and copies them (via `=` assignment) to the target
+
+- It also returns the target as you can see
+
+```js
+var newObj = Object.assign( {}, myObject );
+
+newObj.a; // 2
+newObj.b === anotherObject; // true
+newObj.c === anotherArray; // true
+newObj.d === anotherFunction; // true
+```
+
+#### Property Descriptors
+
+As of ES5, all properties are described in terms of a _property descriptor_
+
+```js
+var myObject = {
+  a: 2
+};
+
+Object.getOwnPropertyDescriptor( myObject, "a" );
+// {
+//   value: 2,
+//   writable: true,
+//   enumerable: true,
+//   configurable: true
+// }
+```
+
+We can use `Object.defineProperty(..)` to add a new property or modify an existing one (if it's `configurable`)
+
+```js
+var myObject = {};
+
+Object.defineProperty( myObject, "a", {
+  value: 2,
+  writable: true,
+  configurable: true,
+  enumerable: true
+} );
+
+myObject.a; // 2
+```
+
+##### Writable
+
+The ability to change the value of a property
+
+```js
+var myObject = {};
+
+Object.defineProperty( myObject, "a", {
+  value: 2,
+  writable: false, // not writable!
+  configurable: true,
+  enumerable: true
+});
+
+myObject.a = 3;
+myObject.a; // 2
+```
+
+If we use `strict mode` we will get a `TypeError`
+
+##### Configurable
+
+As long as a property is currently configurable, we can modify its descriptor definition using `defineProperty(..)`
+
+```js
+var myObject = {
+  a: 2
+};
+
+myObject.a = 3;
+myObject.a; // 3
+
+Object.defineProperty( myObject, "a", {
+  value: 4,
+  writable: true,
+  configurable: false, // not configurable!
+  enumerable: true
+} );
+
+myObject.a; // 4
+myObject.a = 5;
+myObject.a; // 5
+
+Object.defineProperty( myObject, "a", {
+  value: 6,
+  writable: true,
+  configurable: true,
+  enumerable: true
+} ); // TypeError
+```
+
+If you attempt yo change the descriptor definition of a nonconfigurable property, you get a `TypeError`
+
+Another thing `configurable: false` prevents is the use of `delete` to remove an existing property
+
+##### Enumerable
+
+Controls whether a property will show up in certain object-property enumerations such as the `for...in` loop
+
+#### Immutability
+
+ES5 adds support for handling immutability
+
+All of the approaches create shallow immutability, only affect the object and its direct characteristics. If an object has a reference to another (array, object, function) the contents of that object are not affected and remain mutable
+
+##### Object constant
+
+By combining `writable: false` and `configurable: false` you essentially create a constant as an object property
+
+```js
+var myObject = {}
+
+Object.defineProperty(myObject, "favorite_number", {
+  value: 42,
+  writable: false,
+  configurable: false,
+})
+```
+
+##### Prevent extensions
+
+If you want to prevent an object from having new properties added to it, but leve the rest of the objects properties alone
+
+```js
+var myObject = {
+  a: 2
+};
+
+Object.preventExtensions( myObject );
+
+myObject.b = 3;
+myObject.b; // undefined
+```
+
+##### Seal
+
+`Object.seal(..)` creates a sealed object, which means it takes an existing object and essentially calls `Object.preventExtensions(..)` on it, but also marks all its existing properties as `configurable: false`
+
+You can not add any more properties, but also cannot reconfigure or delete any existing properties (you can still modify their values)
+
+##### Freeze
+
+`Object.freeze()` creates a frozen object, it takes an existing object and calls
+
+1. `Object.seal(...)` and marks all "data accessor" as `writable: false` so that their values cannot be changed
+
+This is the highest level of immutability
+
+##### `[[Get]]`
+
+There's a subtle but important detail about how property accesses are performed
+
+```js
+var myObject = {
+  a: 2
+};
+
+myObject.a; // 2
+```
+
+The `myObject.a` is a property access but it doesn't just look in `myObject` for a property of the name `a` as it might seem
+
+The previous code actually performs a `[[Get]]` operation (kinda like a function call: `[[Get]]()`) on the `myObject`
+
+- The default built-in `[[Get]]` operation for an object _first_ inspects the object for a property of the requested name, and if it finds it, it will return the value accordingly
