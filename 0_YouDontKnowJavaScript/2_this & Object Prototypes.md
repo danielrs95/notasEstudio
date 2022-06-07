@@ -1240,3 +1240,111 @@ The `myObject.a` is a property access but it doesn't just look in `myObject` for
 The previous code actually performs a `[[Get]]` operation (kinda like a function call: `[[Get]]()`) on the `myObject`
 
 - The default built-in `[[Get]]` operation for an object _first_ inspects the object for a property of the requested name, and if it finds it, it will return the value accordingly
+
+If `[[Get]]` cannot come up with a value for the property, returns `undefined`
+
+```js
+var myObject = {
+  a: 2
+};
+
+myObject.b; // undefined
+```
+
+This behavior is different from when you reference _variables_ by their identifier names.
+    - If you reference a variable that cannot be resolved within the applicable lexical scope, the result is not `undefined` as it is for _object properties_, but instead `ReferenceError`
+
+```js
+var myObject = {
+  a: undefined
+};
+
+myObject.a; // undefined
+myObject.b; // undefined
+```
+
+1. The `[[Get]]` operations potentially performed a bit more "work" for the reference `myObject.b` than for `.a`
+
+2. Inspecting only the value results, you cannot distinguish whether a property exist and holds the explicit value `undefined` or whether the property does not exist and `undefined` was the return value after `[[Get]]` failed
+
+#### `[[Put]]`
+
+His behaves differs based on a number of factors, including whether the property is already present or not
+
+If is present, will roughly check:
+
+1. Is the property an accessor descriptor? If so, call the setter, if any
+2. Is the property a data descriptor with `writable` of `false`? If so, fail in `non-strict` or throw `TypeError` in `strict mode`
+3. Otherwise set the value to the existing property as normal
+
+#### Getters and Setters
+
+`[[Put]]` and `[[Get]]` control how values are set to existing or new properties
+
+ES5 introduced a way to override part of these default operations
+
+When you define a property to have either a getter or a setter, its definition becomes an _accessor descriptor_ (as opposed to a _data descriptor_)
+
+For _accessor descriptor_ the `value` and `writable` characteristics of the descriptor are moot and ignored, and JS considers the `set` and `get` (as well as `configurable` and `enumerable`)
+
+```js
+var myObject = {
+  // define a getter for `a`
+  get a() {
+    return 2;
+  }
+};
+
+Object.defineProperty(
+  myObject, // target
+  "b",  // property name
+  {     // descriptor
+    // define a getter for `b`
+    get: function(){ return this.a * 2 },
+
+    // make sure `b` shows up as an object property
+    enumerable: true
+  }
+);
+
+myObject.b; // 4
+```
+
+1. Either trough object-literal syntax with `get a() {..}` or explicit definition with `defineProperty(..)` in both cases we created a property on the object that actually doesn't hold a value
+
+    - But whose access automatically results in a hidden function call to the getter function, with whatever value it returns being the result of the property access
+
+```js
+var myObject = {
+  // define a getter for `a`
+  get a() {
+    return 2;
+  }
+};
+
+myObject.a = 3;
+myObject.a; // 2
+```
+
+1. Since we only defined a getter for `a`, the `set` operation won't throw an error but will just silently throw the assignment away
+
+    - Even if there was a `setter` our custom getter is hardcoded to return only `2`, the `set` operation would be moot
+
+Properties should be defined with setter, which overrides the `[[Put]]` operation (aka assignment)
+
+```js
+var myObject = {
+  // define a getter for `a`
+  get a() {
+    return this._a_;
+  },
+
+  // define a setter for `a`
+  set a(val) {
+    this._a_ = val * 2;
+  }
+};
+
+myObject.a = 2;
+myObject.a; // 4
+```
