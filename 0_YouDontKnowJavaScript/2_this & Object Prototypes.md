@@ -1405,7 +1405,7 @@ for (var k in myObject) {
 
     - It's a good idea to use `for..in` loops only on objects and `for` loops with numeric index iteration for arrays
 
-Another way that enumerable and nonenumerable propertties can be distinguished
+Another way that enumerable and nonenumerable properties can be distinguished
 
 ```js
 var myObject = { };
