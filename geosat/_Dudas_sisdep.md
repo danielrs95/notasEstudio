@@ -15,13 +15,14 @@
 
 ## DominioSelector Front
 
-1. El componente basico es el _ListItem.ts_
+1. El componente básico es el _ListItem.ts_
 
   Es una clase, que define la estructura de lo que usara el dominioSelector
 
 
 ## Gestion bodegas
 
-1. Una pagina de actas inventario sin recibir () con su vista
+1. Una pagina de actas inventario sin recibir () con su vista - Actas inventario para recibir retenciones
 2. Pagina de las retenciones
 3. Crear menu que se llame retenciones (listar todas las retenciones)
+    - Hacer dashboard

@@ -987,7 +987,6 @@ myObject.someFoo; // function foo(){..}
 
 The safest conclusion is probably that "function" and "method" are interchangeable in JS
 
-
 ```js
 var myObject = {
   foo: function () {
@@ -1348,3 +1347,94 @@ var myObject = {
 myObject.a = 2;
 myObject.a; // 4
 ```
+
+#### Existence
+
+We can ask an object if it has a certain property without asking to get that property's value
+
+```js
+var myObject = {
+  a: 2
+}
+
+("a" in myObject) // true
+("b" in myObject) // false
+
+myObject.hasOwnProperty("a"); // true
+myObject.hasOwnProperty("b"); // false
+```
+
+1. The `in` operator will check to see if the property is in the object or if it exists ay any higher level of the `[[Prototype]]` chain object traversal
+
+    - `in` checks for the existence of a property name
+    - This difference is important to note with arrays, as the temptation to try a check link `4 in [2,4,6]`, will not behave as expected
+
+2. `hasOwnProperty(..)` checks to see if _only_ `myObject` has the property or not and will not consult the `[[Prototype]]` chain
+
+##### Enumeration
+
+```js
+var myObject = { };
+
+Object.defineProperty(
+  myObject,
+  "a",
+  // make `a` enumerable, as normal
+  { enumerable: true, value: 2 }
+);
+
+Object.defineProperty(
+  myObject,
+  "b",
+  // make `b` NON-enumerable
+  { enumerable: false, value: 3 }
+);
+
+myObject.b; // 3
+("b" in myObject); // true
+myObject.hasOwnProperty( "b" ); // true
+
+// .......
+for (var k in myObject) {
+  console.log( k, myObject[k] );
+}
+// "a" 2
+```
+
+1. `myObject.b` exists, has an accessible value but it doesn't show up in a `for..in` loop
+
+    - It's a good idea to use `for..in` loops only on objects and `for` loops with numeric index iteration for arrays
+
+Another way that enumerable and nonenumerable propertties can be distinguished
+
+```js
+var myObject = { };
+
+Object.defineProperty(
+  myObject,
+  "a",
+  // make `a` enumerable, as normal
+  { enumerable: true, value: 2 }
+);
+
+Object.defineProperty(
+  myObject,
+  "b",
+  // make `b` NON-enumerable
+  { enumerable: false, value: 3 }
+);
+
+myObject.propertyIsEnumerable("a") // true
+myObject.propertyIsEnumerable("b") // false
+
+Object.keys(myObject); // ['a']
+Object.getOwnPropertyNames(myObject) // ['a','b']
+```
+
+1. `propertyIsEnumerable` test whether the given property name exists _directly_ on the object and is also `enumerable:true`
+2. `Object.keys(...)` returns an array of all enumerable properties
+3. `Object.getOwnPropertyNames(...)` returns an array of all properties
+
+`Object.keys(...)` and `Object.getOwnPropertyNames(...)` both inspect _only_ the direct object specified
+
+### Iteration
