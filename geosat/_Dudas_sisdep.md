@@ -8,10 +8,10 @@
 
 ## Pendientes
 
-2. `http://localhost:3000/regulaciones/autorizaciones/resolucion`
-4. Card agregar Anexos en la pagina del detalle del traslado  x infraestructura
-5. Agregar resolucion desde el detalle de caracterizacion en traslado x infraestructura
-6. Select propio para hacer la transitoria y
+1. `http://localhost:3000/regulaciones/autorizaciones/resolucion`
+2. Card agregar Anexos en la pagina del detalle del traslado  x infraestructura
+3. Agregar resolución desde el detalle de caracterización en traslado x infraestructura
+4. Select propio para hacer la transitoria y
 
 ## DominioSelector Front
 
@@ -19,8 +19,7 @@
 
   Es una clase, que define la estructura de lo que usara el dominioSelector
 
-
-## Gestion bodegas
+## Gestión bodegas
 
 1. Una pagina de actas inventario sin recibir () con su vista - Actas inventario para recibir retenciones
 2. Pagina de las retenciones
