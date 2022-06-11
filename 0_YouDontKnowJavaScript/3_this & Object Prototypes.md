@@ -1438,3 +1438,129 @@ Object.getOwnPropertyNames(myObject) // ['a','b']
 `Object.keys(...)` and `Object.getOwnPropertyNames(...)` both inspect _only_ the direct object specified
 
 ### Iteration
+
+The `for...in` loop iterates over the list of enumerable properties on an object.
+
+If you want to iterate over the values, with numerically indexed arrays is possible with a `for` loop
+
+```js
+var myArray = [1, 2, 3];
+
+for (var i = 0; i < myArray.length; i++) {
+  console.log( myArray[i] );
+}
+// 1 2 3
+```
+
+- This isn't iterating over the values, it is iterating over the indices, then using the index to reference de value as `myArray[i]`
+
+ES5 added several iteration helpers for arrays, these helpers accepts a function callback to apply to each element in the array, differing only in how they respectively respond to a return value from the callback
+
+1. _forEach(...)_
+
+    Will iterate over all values in the array, and it ignores any callback return values
+
+2. _every(..)_
+
+    Keeps going until the end or the callback returns a `false` or `falsy` value
+
+3. _some(...)_
+
+    Keeps going until the end or the callback return a `true` or `truthy` value
+
+These special return values inside `every(..)` and `some(...)` act like a `break` statement inside a normal `for` loop
+
+If you want to iterate over the values directly instead of the array indices (or object properties?), ES6 adds a `for...of` loop
+
+```js
+var myArray = [ 1, 2, 3 ];
+
+for (var v of myArray) {
+  console.log( v );
+}
+// 1
+// 2
+// 3
+```
+
+The `for..of` asks for an iterator object (from a default internal function know as `@@iterator` in spec-speak) of the _thing_ to be iterated
+    - The loop then iterates over the successive return values from calling that iterator object's `next()` method, once for each loop
+
+Arrays have a built-in `@@iterator`, so `for...of` works easily on them, let's manually iterate the array using the built-in `@@iterator`
+
+```js
+var myArray = [1,2,3];
+var it = myArray[Symbol.iterator]();
+
+it.next(); // { value:1, done:false }
+it.next(); // { value:2, done:false }
+it.next(); // { value:3, done:false }
+it.next(); // { done:true }
+```
+
+1. We get at the `@@iterator` internal property of an object using an ES6 `Symbol.iterator`
+
+    - You will always want to reference such special properties by `Symbol` name reference instead of by the special value it may hold
+
+    - Despite the names implications, `@@iterator` is not the iterator object itself, but a function that returns the iterator object
+
+2. The return value from an iterator's `next()` call is an object of the form `{value:..., done:...}`. Value is the current iteration value, and done is a boolean that indicated whether there's more to iterate
+
+3. The `value` 3 was returned with a `done:false`, you have to call the `next()` a fourth time to get `done:true`. The reason for this comes from the semantics of ES6 generator functions
+
+Regular objects do not have a built-in `@@iterator`, but it is possible to define your own
+
+```js
+var myObject = {
+  a: 2,
+  b: 3,
+}
+
+Object.defineProperty( myObject, Symbol.iterator, {
+  enumerable: false,
+  writable: false,
+  configurable: true,
+  value: function() {
+    var o = this;
+    var idx = 0;
+    var ks = Object.keys(o);
+    return {
+      next: function() {
+        return {
+          value: o[ks[idx++]],
+          done: (idx > ks.length)
+        }
+      }
+    }
+  }
+})
+
+// iterate `myObject` manually
+var it = myObject[Symbol.iterator]();
+it.next() // {value:2, done: false}
+it.next() // {value:3, done: false}
+it.next() // {value:undefined, done: true}
+
+// iterate `myObject` with `for..of`
+for (var v of myObject) {
+  console.log( v );
+}
+// 2
+// 3
+```
+
+1. We used `Object.defineProperty(...)` do define `@@iterator` and to make it nonenumerable, it could also be defined using the `Symbol` as a _computed property name_, we could have declared ir directly
+
+    ```js
+      var myObject = {
+        a: 2,
+        b: 3,
+        [Symbol.iterator]: function () {
+          ....
+        }
+      }
+    ```
+
+2. Each time the `for..of` loop calls `next()` on `myObject`, the internal pointer will advance and return back the next value from the object's properties list
+
+3. You can define arbitrarily complex iterations for your data, _custom iterators_ combined with ES6 `for...of` loop are a powerful new syntactic tool for manipulating user-defined objects
