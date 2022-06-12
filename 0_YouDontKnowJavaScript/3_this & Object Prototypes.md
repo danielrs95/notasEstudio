@@ -1564,3 +1564,48 @@ for (var v of myObject) {
 2. Each time the `for..of` loop calls `next()` on `myObject`, the internal pointer will advance and return back the next value from the object's properties list
 
 3. You can define arbitrarily complex iterations for your data, _custom iterators_ combined with ES6 `for...of` loop are a powerful new syntactic tool for manipulating user-defined objects
+
+### 3. Review
+
+Objects have a literal form `var a = {...}` and a constructed form `var a = new Array(...)`
+
+Objects are one of the six primitive types, objects have subtypes, including `function` and can be behavior-specialized like `[object Array]`
+
+Objects are collections of key/values, values can be accessed as properties via the `.propName` or `["propName"]`
+    - Whenever a property is accessed, the engine invokes the internal default `[[Get]]` (`[[Put]]` for setting values)
+    - The property is locked directly on the object, and on the `[[Prototype]]` chain if not found
+
+Properties have certain characteristics that can be controlled trough property descriptors, such as `writable` and `configurable`
+
+In addition, objects can have their mutability controlled to various levels using:
+
+  > Object.preventExtensions(..)
+  > Object.seal(...)
+  > Object.freeze(...)
+
+Properties don't have to contain values, they can be _accessor properties_ as well, with getters/setters
+
+Properties can be either enumerables or not, which controls wether they show up in `for..in` loop iterations
+
+You can iterate over the values in data structures (arrays, objects, etc) using the ES6 `for...of`, which looks for either a built-in or custom `@@iterator` object consisting of a `next()` method to advance through the data values one at a time
+
+## 4. Mixing Up Classes
+
+1. Classes are a design pattern. JS has a similar syntax, but it behaves very differently from what your'e used to with classes in other languages
+
+2. Classes mean copies
+
+3. When traditional classes are instantiated, a copy of behavior from class to instance occurs
+
+4. When classes are inherited, a copy of behavior from parent to child occurs
+
+5. Polymorphism (having different functions at multiple levels of an inheritance chain with the same name) is just a result of copy behavior
+    - May seem like it implies a referential relative link from child back to parent, but it's not the case
+
+6. JS does not automatically create copies (as classes imply) between objects
+
+7. The _mixin pattern_ (explicit & implicit) is used to sort of emulate class copy behavior, but this usually leads to ugly and brittle syntax like explicit pseudopolymorphism
+
+    > OtherObj.methodName.call(this,...)
+
+8. Explicit mixins are not exactly the same as class-copy behavior, since objects (and functions) only have shared references duplicated, not the object/functions themselves
