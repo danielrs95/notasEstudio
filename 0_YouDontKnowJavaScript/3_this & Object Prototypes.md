@@ -81,7 +81,7 @@ foo.count = 0;
 var i;
 
 for (i=0; i<10; i++) {
-  if (i > 5) {
+  if (i > 5) {>
     foo( i );
   }
 }
@@ -1852,3 +1852,162 @@ bar.something(); // Tell me something good...
 4. In JS no copies are made, rather, objects end up linked to each other via an internal `[[Prototype]]` chain
 
 5. _Delegation_ is a more appropriate term, because these relationships are not copies but delegation links
+
+## Behavior Delegation
+
+### Toward Delegation-Oriented Design
+
+We need to try to change our thinking from the class/inheritance design pattern to the behavior delegation design pattern
+
+#### Class Theory
+
+If we have similar tasks (XYZ, ABC), with classes you design like this:
+
+1. Define a general parent (base) class like `Task` with shared behavior
+2. Define child classes `XYZ`, `ABC` which inherit from `Task` and each adds specialized behavior
+3. _Class design_ encourages you to employ _method overriding_ to get the most of inheritance
+    - You override the definition of some methods on `Task`
+
+```js
+class Task {
+  id;
+
+  // constructor `Task()`
+  Task(ID) { id = ID; }
+  outputTask() { output( id ); }
+}
+
+class XYZ inherits Task {
+  label;
+
+  // constructor `XYZ()`
+  outputTask() { super(); output( label ); }
+  XYZ(ID,Label) { super( ID ); label = Label; }
+}
+
+class ABC inherits Task {
+  // ...
+}
+```
+
+1. You can _instantiate_ copies of the `XYZ` child class and use those instances to perform "task" `XYZ`
+2. After construction, you will generally only interact with these instances (and not the classes)
+3. The instances have copies of all the behavior you need to do the intended task
+
+#### Delegation Theory
+
+With _behavior delegation_ instead of classes
+
+1. Define an _object_ called `Task`, it will have concrete behavior on it
+    - Includes methods that varios tasks can use (_delegate to!_)
+
+2. For each task `XYZ` you define an object to hold that task-specific data/behavior
+    - You link your task-specific objects to the `Task` utility object, allowing them to delegate to it when they need to
+
+Basically, think about needing behaviors from 2 sibling objects (`XYZ` and `Task`) to perform tha task `XYZ`
+
+```js
+Task = {
+  setID: function(ID) { this.id = ID }
+  outputID: function() { console.log( this.id ) }
+}
+
+// make `XYZ` delegate to `Task`
+XYZ = Object.create( Task )
+
+XYZ.prepareTask = function(ID, Label) {
+  this.setID(ID)
+  this.label = Label
+}
+
+XYZ.outputTaskDetails = function() {
+  this.outputID()
+  console.log( this.label )
+}
+```
+
+1. `XYZ` and `Task` are not classes, or functions, they are just objects
+    - `XYZ` delegate to the `Task` object
+
+2. This style of code is called _OLOO (Object Linked to Other Objects)_
+
+3. `id` and `label` on the _class_ example are properties directly on `XYZ`
+    - In general, you want state to be on the delegators (XYZ) not on the delegate(Task)
+
+4. With _class_ intentionally name methods the same so we can take advantage of overriding
+    - In _behavior delegation_ we avoid naming things the same at different levels of the `[[Prototype]]` chain
+
+    - This design pattern calls for more descriptive method names, specific to the type of behavior each object is doing
+
+5. `this.setID(ID)` inside of a method on the `XYZ` object first look for `setID(..)` on `XYZ`
+
+    - It doesn't find a method on `XYZ`, `[[Prototype]]` delegation kicks in, follow the link to `Task` to look for `setID(...)` which finds
+    - Because of implicit call-site `this` binds to `XYZ` as we'd expect
+    - The general utility methods that exist on `Task` are available to us while interacting with `XYZ`, because XYZ can delegate to `Task`
+
+_Behavior delegation_ means to let some object (XYZ) provide a delegation (to Task) for property or method references if they are not found on the object (XYZ)
+
+#### Metal Models Compared
+
+Let's compare Object Orientated and OLOO styles
+
+```js
+// * Object Oriented Style
+function Foo(who) {
+  this.me = who;
+}
+
+Foo.prototype.identify = function() {
+  return "I am " + this.me;
+};
+
+function Bar(who) {
+  Foo.call( this, who );
+}
+
+Bar.prototype = Object.create( Foo.prototype );
+
+Bar.prototype.speak = function() {
+  alert( "Hello, " + this.identify() + "." );
+};
+
+var b1 = new Bar( "b1" );
+var b2 = new Bar( "b2" );
+
+b1.speak();
+b2.speak();
+```
+
+Class-style code snippet implies this mental model of entities and their relationships
+![YDKJS_2](/images/YDKJS_2.png)
+
+```js
+// ! Object Linked to Other Object
+Foo = {
+  init: function(who) {
+    this.me = who
+  },
+
+  identify: function() {
+    return 'I am' + this.me
+  },
+}
+
+Bar = Object.create(Foo)
+
+Bar.speak = function() {
+  alert('Hello' + this.identify() + '.')
+}
+
+var b1 = Object.create( Bar );
+b1.init( "b1" );
+var b2 = Object.create( Bar );
+b2.init( "b2" );
+
+b1.speak();
+b2.speak();
+```
+
+Mental model for Object Link to Other Object
+
+![3](../images/YDKJS_3.png)
