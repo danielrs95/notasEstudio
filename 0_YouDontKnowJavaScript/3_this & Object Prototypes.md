@@ -1853,7 +1853,7 @@ bar.something(); // Tell me something good...
 
 5. _Delegation_ is a more appropriate term, because these relationships are not copies but delegation links
 
-## Behavior Delegation
+## 6. Behavior Delegation
 
 ### Toward Delegation-Oriented Design
 
@@ -1947,7 +1947,7 @@ XYZ.outputTaskDetails = function() {
 
 _Behavior delegation_ means to let some object (XYZ) provide a delegation (to Task) for property or method references if they are not found on the object (XYZ)
 
-#### Metal Models Compared
+#### Mental Models Compared
 
 Let's compare Object Orientated and OLOO styles
 
@@ -2011,3 +2011,115 @@ b2.speak();
 Mental model for Object Link to Other Object
 
 ![3](../images/YDKJS_3.png)
+
+### Classes Versus Objects
+
+#### Widget Classes
+
+Let's examine how we'd implement the class design in classic-style pure JS without any class helper library or syntax
+
+```js
+// ! Parent class
+function Widget(width,height) {
+  this.width = width || 50;
+  this.height = height || 50;
+  this.$elem = null;
+}
+
+Widget.prototype.render = function($where) {
+  if (this.$elem) {
+    this.$elem.css({
+      width: this.width + "px";
+      height: this.height + "px";
+    }).appendTo($where)
+  }
+}
+
+// * Child class
+function Button(width, height, label) {
+  // super constructor call
+  Widget.call(this, width, height)
+  this.label = label || 'Default'
+
+  this.$elem = $('<button>').text(this.label)
+}
+
+// make 'Button' inherit from Widget
+Button.prototype = Object.create(Widget.prototype)
+
+// Override base inherited render(...)
+Button.prototype.render = function($where) {
+  // "super" call
+  Widget.prototype.render.call(this, $where)
+  this.$elem.click(this.onClick.bind(this))
+}
+
+Button.prototype.onClick = function(evt) {
+  console.log("Button" + this.label + "clicked")
+}
+
+$(document).ready(function(){
+  var $body = $(document.body)
+  var btn1 = new Button(125,30,'Hello')
+  var btn2 = new Button(150,40,'World')
+
+  btn1.render($body)
+  btn2.render($body)
+})
+```
+
+1. Object Oriented pattern tell us to declare a base `render(...)` in the parent class, then override it in our child class to augment the base functionality with button-specific behavior
+
+2. Notice the ugliness of explicit pseudopolymorphism with `Widget.call` and `Widget.prototype.render.call` references for faking _super_ calls from the child class
+
+##### ES6 class sugar
+
+ES6 added class, lets see how the code will change
+
+```js
+class Widget {
+  constructor(width,height) {
+    this.width = width || 50;
+    this.height = height || 50;
+    this.$elem = null;
+  }
+
+  render($where){
+    if (this.$elem) {
+      this.$elem.css({
+        width: this.width + "px",
+        height: this.height + "px"
+      }).appendTo($where);
+    }
+  }
+}
+
+class Button extends Widget {
+  constructor(width,height,label) {
+  super( width, height );
+  this.label = label || "Default";
+  this.$elem = $( "<button>" ).text( this.label );
+}
+
+  render($where) {
+    super( $where );
+    this.$elem.click( this.onClick.bind( this ) );
+  }
+
+  onClick(evt) {
+    console.log( "Button '" + this.label + "' clicked!" );
+  }
+}
+
+$( document ).ready( function(){
+  var $body = $( document.body );
+  var btn1 = new Button( 125, 30, "Hello" );
+  var btn2 = new Button( 150, 40, "World" );
+  btn1.render( $body );
+  btn2.render( $body );
+} );
+```
+
+1. Despite syntactic improvements, these are not real classes, they still operate with `[[Prototype]]`
+
+#### Delegating Widget Objects
