@@ -1585,7 +1585,7 @@ In addition, objects can have their mutability controlled to various levels usin
 
 Properties don't have to contain values, they can be _accessor properties_ as well, with getters/setters
 
-Properties can be either enumerables or not, which controls wether they show up in `for..in` loop iterations
+Properties can be either enumerable or not, which controls wether they show up in `for..in` loop iterations
 
 You can iterate over the values in data structures (arrays, objects, etc) using the ES6 `for...of`, which looks for either a built-in or custom `@@iterator` object consisting of a `next()` method to advance through the data values one at a time
 
@@ -1702,7 +1702,7 @@ myObject.hasOwnProperty( "a" ); // true
 
 #### "Class" Functions
 
-All functions by default get a public, nonenumerable property on them called `prototype` which points at an otherwise arbitratry object
+All functions by default get a public, nonenumerable property on them called `prototype` which points at an otherwise arbitrary object
 
 ```js
 function Foo() {
@@ -2123,3 +2123,204 @@ $( document ).ready( function(){
 1. Despite syntactic improvements, these are not real classes, they still operate with `[[Prototype]]`
 
 #### Delegating Widget Objects
+
+```js
+var Widget = {
+  init: function(width, height) {
+    this.width = width || 50;
+    this.height = height || 50;
+    this.$elem = null;
+  },
+
+  insert: function($where) {
+    if (this.$elem) {
+      this.$elem.css({
+        width: this.width + 'px',
+        height: this.height + 'px',
+      }).appendTo($where)
+    }
+  }
+}
+
+var Button = Object.create(Widget)
+
+Button.setup = function(width,height,label) {
+  // Delegate call
+  this.init(width, height)
+  this.label = label || 'Default'
+
+  this.$elem = $('<button>').text(this.label)
+}
+
+Button.build = function($where) {
+  // Delegated call
+  this.insert($where)
+  this.$elem.click(this.onClick.bind(this))
+}
+
+Button.onClick = function(evt) {
+  console.log('Button' + this.label + 'clicked')
+}
+
+$( document ).ready( function(){
+  var $body = $( document.body );
+
+  var btn1 = Object.create( Button );
+  btn1.setup( 125, 30, "Hello" );
+
+  var btn2 = Object.create( Button );
+  btn2.setup( 150, 40, "World" );
+
+  btn1.build( $body );
+  btn2.build( $body );
+} );
+```
+
+1. `Widget` is just an object and is a utility collection that any specific type of widget might want to delegate to
+2. `Button` is also just a standalone object (with a delegation link to `Widget`)
+
+3. From a design pattern perspective, we didn't share the same method name `render(...)` in both objects, as classes suggets
+
+    - We chose different names `insert(...)` and `build(...)` that were more descriptive of what task each does
+
+    - The _initialization_ methods are called `init(..)` and `setup(...)` for the same reason
+
+    - This avoid the ugliness of the explicit pseudopolymorphic calls (`Widget.call` and `Widget.prototype.render.call`) as you can see by the simple delegated calls to `this.init(..)` and `this.insert(..)`
+
+4. We don't have any constructors, `.prototype` ir `new` present, they are unnecessary
+
+5. We first setup button and then build it, _OLOO_ better supports the principle of separation of concerns, where creation and initialization are not necessarily conflated into the same operation
+
+### Simpler Design
+
+Example of behavior for a login
+
+```js
+
+var LoginController = {
+  errors: [],
+
+  getUser: function() {
+    return document.getElementById(
+    "login_username"
+    ).value;
+  },
+
+  getPassword: function() {
+    return document.getElementById(
+    "login_password"
+    ).value;
+  },
+
+  validateEntry: function(user,pw) {
+    user = user || this.getUser();
+    pw = pw || this.getPassword();
+
+    if (!(user && pw)) {
+      return this.failure(
+        "Please enter a username & password!"
+      );
+    } else if (user.length < 5) {
+      return this.failure(
+        "Password must be 5+ characters!"
+      );
+    }
+
+    // got here? validated!
+    return true;
+  },
+
+  showDialog: function(title,msg) {
+    // display success message to user in dialog
+  },
+
+  failure: function(err) {
+    this.errors.push( err );
+    this.showDialog( "Error", "Login invalid: " + err );
+  }
+};
+
+// Link `AuthController` to delegate to `LoginController`
+var AuthController = Object.create( LoginController );
+
+AuthController.errors = [];
+
+AuthController.checkAuth = function() {
+  var user = this.getUser();
+  var pw = this.getPassword();
+
+  if (this.validateEntry( user, pw )) {
+    this.server( "/check-auth",{
+      user: user,
+      pw: pw
+    })
+    .then( this.accepted.bind( this ) )
+    .fail( this.rejected.bind( this ) );
+  }
+};
+
+AuthController.server = function(url,data) {
+  return $.ajax( {
+    url: url,
+    data: data
+  } );
+};
+
+AuthController.accepted = function() {
+  this.showDialog( "Success", "Authenticated!" )
+};
+
+AuthController.rejected = function(err) {this.failure( "Auth Failed: " + err )};
+```
+
+1. `AuthController` is just an object (so is `LoginController`) we don't need to instantiate to perform our task, all we need to do is: `AuthController.checkAuth()`
+
+2. With behavior delegation, we don't need a base `Controller` class to share behavior between the other 2 `AuthController` and `LoginController`
+
+### Nicer Syntax
+
+ES6's classes add shorthand syntax for declaring class methods
+
+```js
+class Foo {
+  methodName() {....}
+}
+```
+
+As of ES6, we can use _concise method declarations_ in any object literal, so an object in OLOO style can be declared this way
+
+```js
+var LoginController = {
+  errors: [],
+  getUser() {
+    // ...
+  },
+  getPassword() {
+    // ...
+  },
+}
+```
+
+There is one _drawback_ to concise methods that's subtle but important
+
+```js
+var Foo = {
+  bar() { /*..*/ },
+  baz: function baz() { /*..*/ }
+};
+```
+
+1. The `bar()` shorthand became an anonymous function expression attached to the `bar` property, because the function object itself has no name identifier
+
+    - _Anonymous functions_ have 3 main downsides
+    - Makes debugging stack traces harder
+    - Makes self-referencing harder
+    - Makes code harder to understand
+
+### 6. Review
+
+Behavior delegation suggests objects as peers of each other, which delegate among themselves, rather tan parent and child class relationships
+
+JS `[[Prototype]]` mechanism is a behavior delegation mechanism
+
+When you design code with objects only, it simplify the syntax and lead to simpler code architecture design
