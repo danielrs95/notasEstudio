@@ -449,3 +449,417 @@ foo(a.slice());
 1. `slice(..)` with no parameters by default makes an entirely new copy of the `array`
 
 ## 3. Natives
+
+A list of the most commonly used natives
+
+- `String()`
+- `Number()`
+- `Boolean()`
+- `Array()`
+- `Object()`
+- `Function()`
+- `RegExp()`
+- `Date()`
+- `Error()`
+- `Symbol()`
+
+These natives, are actually built-in functions
+
+`String()` look like the `String(...)` constructor from JAVA, you can do things like
+
+```js
+var s = new String("Hello world");
+console.log(s.toString()); // "Hello world"
+```
+
+It is true that each of these natives can be used as a native constructor. But, what's being constructed may be different than you think
+
+```js
+var a = new String("abc");
+
+typeof a; // "object"
+
+a instanceof String; // true
+
+Object.prototype.toString.call(a); // "[Object String]"
+```
+
+1. The result of the constructor form of value creation (`new String("abc")`) is an object wrapper around the primitive (`"abc"`)
+
+2. `typeof` shows that these objects are not their own special types, they are subtypes of the `object` type
+
+3. `new String("abc")` creates a string wrapper object around `"abc"`, not just the primitive `"abc"` value itself
+
+### Internal `[[Class]]`
+
+Values that are `typeof` of object are additionally tagged with an internal `[[Class]]` property (like an internal classification).
+
+This property cannot be accessed directly, but can generally be revealed indirectly by borrowing the default `Object.prototype.toString(...)` against the value
+
+```js
+Object.prototype.toString.call([1,2,3]); // "[object Array]"
+Object.prototype.toString.call(/regex-literal/i); // "[object RegExp]"
+```
+
+In most cases, this internal `[[Class]]` value corresponds to the built-in native constructor that's related to the value, but that's not always the case
+
+```js
+Object.prototype.toString.call(null); // "[object Null]"
+Object.prototype.toString.call(undefined); // "[object Undefined]"
+```
+
+There are no `Null()` or `Undefined()` native constructors, but "`Null`" and "`Undefined`" are the internal `[[Class]]` values exposed
+
+For the other simple primitives like `string`, `number` and `boolean`, another behavior actually kicks in, usually called "boxing"
+
+```js
+Object.prototype.toString.call("abc"); // "[object String]"
+Object.prototype.toString.call(42); // "[object Number]"
+Object.prototype.toString.call(true); // "[object Boolean]"
+```
+
+1. Each of the simple primitives are automatically boxed by their respective object wrappers
+
+### Boxing Wrappers
+
+Primitive values don't have properties or methods, so to access `.length` or `.toString()` you need an object wrapper around the value
+
+JS automatically box the primitive value
+
+```js
+var a = "abc";
+
+a.length; // 3
+a.toUpperCase(); // ABC
+```
+
+In general there's basically no reason to use the object form directly, it's better to just let the boxing happen implicitly where necessary
+
+### Unboxing
+
+If you have an object wrapper and you want to get the underlying primitive value out, you can use the `valueOf()` method
+
+```js
+var a = new String( "abc" );
+var b = new Number( 42 );
+var c = new Boolean( true );
+
+a.valueOf(); // "abc"
+b.valueOf(); // 42
+c.valueOf(); // true
+```
+
+Unboxing can also happen implicitly, when using an object wrapper value in a way that requires the primitive value (Coercion)
+
+```js
+var a = new String( "abc" );
+var b = a + ""; // `b` has the unboxed primitive value "abc"
+
+typeof a; // object
+typeof b; // string
+```
+
+### Natives as Constructors
+
+#### Array(...)
+
+```js
+var a = new Array( 1, 2, 3 );
+a; // [1, 2, 3]
+
+var b = [1, 2, 3];
+b; // [1, 2, 3]
+```
+
+1. The `Array(..)` constructor does not require the `new` keyword in front of it
+
+2. Never use Array with a single argument, this creates an array of that size with "empty" slots but it's really buggy
+
+#### Date(..) and Error(..)
+
+The `Date(..)` and `Error(..)` native constructors are much more useful, because there is no literal form for either
+
+To create a date object value, you mues use `new Date()`
+
+The `Error()` constructor behaves the same with the `new` keyword present or omitted
+
+The main reason you'd want to create an error object is that it captures the current execution stack context into the object. This stack context includes the function call stack and the line number where the error object was created
+
+You would tipically use such an error object with the `throw` operator
+
+```js
+function foo(x) {
+  if (!x) {
+    throw new Error("x don't exist");
+  }
+};
+```
+
+1. Error object instances generally have at least a `message`
+2. It's usually best to just call `toString()` on the error object to get a friendly formatted error message
+
+#### Symbol(...)
+
+Symbols are special "unique" values that can be used as properties on objects with little fear of any collision
+
+Symbols can be used as property names, but you cannot see or access the actual value of a symbol from your program, nor from the developer console
+
+To define your own custom symbols, use the `Symbol(..)` native, this constructor is unique, you're not allowed to use `new` with it
+
+```js
+var mysym = Symbol( "my own symbol" );
+mysym; // Symbol(my own symbol)
+mysym.toString(); // "Symbol(my own symbol)"
+typeof mysym; // "symbol"
+
+var a = { };
+a[mysym] = "foobar";
+
+Object.getOwnPropertySymbols( a );
+// [ Symbol(my own symbol) ]
+```
+
+#### Native Prototypes
+
+Each of the built-in native constructors has its own `.prototype` object
+These objects contain behavior unique to their particular object subtype
+
+## 4. Coercion
+
+### Converting Values
+
+Converting a value from one type to another is called _type casting_ when done explicitly and _coercion_ when done implicitly
+
+JS coercions always results in one of the scalar
+
+```js
+var a = 42;
+var b = a + ""; // implicit coercion
+var c = String( a ); // explicit coercion
+```
+
+### Abstract Value Operations
+
+We need to learn the basic rules that govern how values become either a `string`, `number` or `boolean`.
+
+ES5 defines several abstract operations with the rules of value conversion
+
+#### ToString
+
+When any `non-string` value is coerced to a `string` representation, the conversion is handled by the `ToString` abstract operation in section 9.8 of the specification
+
+Built-in primitive values have natural stringification
+
+- `null` becomes null
+- `undefined` becomes undefined
+- `true` becomes true
+- `numbers` are generally expressed in the natural way you'd expect
+  - Very small or large numbers are represented in exponent form
+
+- For regular objects, unless you specify your own, the default `toString()` (located in `Object.prototype.toString()`) will return the internal `[[Class]]`
+
+- Arrays have an overridden default `toString()` that stringifies as the (string) concatenation of all its values with `,` in between each value
+
+    ```js
+    var a = [1,2,3];
+    a.toString(); // "1,2,3"
+    ```
+
+##### JSON stringification
+
+Another task that seems awfully related to `ToString` is when you use the  `JSON.stringify(...)` utility to serialize a value to a JSON-compatible `string` value
+
+This stringification is not exactly the same thing as coercion, but it's related to th `ToString` rules above
+
+For most simple values, JSON stringification behaves basically the same as `toString()` conversions, except that the serialization result is _always_ a string
+
+```js
+JSON.stringify( 42 );// "42"
+JSON.stringify( "42" ); // ""42"" (a string with a
+                      // quoted string value in it)
+JSON.stringify( null ); // "null"
+JSON.stringify( true ); // "true"
+```
+
+Any _JSON-safe_ value can be stringified by `JSON.stringify(..)`. _JSON-safe_ is any value that can be represented validly in a JSON representation
+
+Values that are not JSON-safe `undefined`, `function`, `symbol` and `object` with circular references
+
+`JSON.stringify(..)` will automatically omit `undefined`, `function`, and `symbol` values when it comes across them.
+
+If such a value is found in an `array`, that value is replaced by `null`
+If found as a property of an `object` that property will simply be excluded
+
+```js
+JSON.stringify( undefined ); // undefined
+JSON.stringify( function(){} ); // undefined
+
+JSON.stringify(
+  [1,undefined,function(){},4]
+); // [1,null,null,4]
+
+JSON.stringify(
+  { a:2, b:function(){} }
+);// {"a":2}
+```
+
+JSON stringification has the special behavior that if an `object` value has a `toJSON()` method defined, this method will be called first to get a value to use for serialization
+
+```js
+var o = { };
+
+var a = {
+  b: 42,
+  c: o,
+  d: function(){}
+};
+
+// create a circular reference inside `a`
+o.e = a;
+
+// would throw an error on the circular reference
+// JSON.stringify( a );
+
+// define a custom JSON value serialization
+a.toJSON = function() {
+  // only include the `b` property for serialization
+  return { b: this.b };
+};
+
+JSON.stringify( a ); // "{"b":42}"
+```
+
+1. `toJSON()` should be interpreted as to a JSON-safe value suitable for stringification, not to a JSON string
+
+An optional second argument can be passed to `JSON.stringify(..)` that is called _replacer_ and can be an `array` or a `function`
+    - It's used to customize the recursive serialization of an `object` by providing a filtering mechanism for which properties should and should not be included
+
+If _replacer_ is an `array` it should be an array of `strings`, each of which will specify a property name that is allowed to be included in the serialization of the `object`. If a property exists that isn't in this list, it will be skipped
+
+If _replacer_ is a `function`, it will be called once for the `object` itself, and then once for each property in the `object`. Each time is passed 2 arguments, _key_ and _value_. To skip a _key_ in the serialization, return `undefined`
+
+```js
+var a = {
+  b: 42,
+  c: "42",
+  d: [1,2,3]
+};
+
+JSON.stringify( a, ["b","c"] ); // "{"b":42,"c":"42"}"
+
+JSON.stringify( a, function(k,v){
+  if (k !== "c") return v;
+} );
+// "{"b":42,"d":[1,2,3]}"
+```
+
+1. In the `function` replacer case, the key argument `k` is `undefined` for the first call (where the `a` object itself is being passed)
+
+2. The `if` statement filters out the property `c`
+
+3. Stringification is recursive, so the [1,2,3] array  has each of its values passed as `v` to _replacer_ with indexes (0,1,2) as `k`
+
+A third optional argument can also be passed to `JSON.stringify(..)` called _space_, which is used as indentation for prettier human-friendly
+
+1. Can be a positive integer to indicate how many space characters should be used at each indentation level
+2. Can be a `string` in which case up to the first 10 characters of its value will be used for each indentation level
+
+```js
+var a = {
+  b: 42,
+  c: "42",
+  d: [1,2,3]
+};
+
+JSON.stringify( a, null, 3 );
+// "{
+//   "b":42,
+//   "c":"42",
+//   "d": [
+//     1,
+//     2,
+//     3
+//   ]
+// }"
+
+JSON.stringify( a, null, "-----" );
+// "{
+// -----"b": 42,
+// -----"c": "42",
+// -----"d": [
+// ----------1,
+// ----------2,
+// ----------3
+// -----]
+// }"
+```
+
+#### ToNumber
+
+Follows ES5 spec section 9.3
+
+- `true` becomes 1
+- `false` becomes 0
+- `undefined` becomes `NaN`
+- `null` becomes 0
+
+For `string` value essentially works for the most part like the rules/syntax for numeric literals. If it fails, the result is `NaN`
+
+Objects (and arrays) will first be converted to their primitive value equivalent, and the resulting value is coerced to a `number` according to the rules
+
+To convert to this primitive value equivalent, the `ToPrimitive` abstract operation will consul the value in question using the internal `DefaultValue` to see if it has a `valueOf()` method
+    - If `valueOf()` is available and it returns a primitive value, that value is used for the coercion
+    - If not, `toString()` will provide the value for the coercion, if present
+    - If neither operation can provide a primitive value, a `TypeError` is thrown
+
+```js
+var a = {
+  valueOf: function(){
+    return "42";
+  }
+};
+
+var b = {
+  toString: function(){
+    return "42";
+  }
+};
+
+var c = [4,2];
+
+c.toString = function(){
+  return this.join( "" ); // "42"
+};
+
+Number( a ); // 42
+Number( b ); // 42
+Number( c ); // 42
+Number( "" ); // 0
+Number( [] ); // 0
+Number( [ "abc" ] ); // NaN
+```
+
+#### ToBoolean
+
+JS has keywords `true` and `false`, and the behave like `boolean` values
+
+It's a common misconception that the values `1` and `0` are identical to `true`/`false`. You can coerce `1` to `true` and viceversa. But they're not the same
+
+##### Falsy values
+
+All of JS values can be divided into two categories
+
+1. Values that will become `false` if coerced to `boolean`
+2. Everything else
+
+The falsy values are
+
+1. `undefined`
+2. `null`
+3. `false`
+4. `+0`, `-0` and `NaN`
+5. `""`
+
+JS doesn't define a "truthy" list per se, the spec implies that _anything not explicitly on the falsy list is therefore truthy_
+
+##### Falsy objects
