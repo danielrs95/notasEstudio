@@ -863,3 +863,399 @@ The falsy values are
 JS doesn't define a "truthy" list per se, the spec implies that _anything not explicitly on the falsy list is therefore truthy_
 
 ##### Falsy objects
+
+Consider:
+
+```js
+var a = new Boolean( false );
+var b = new Number( 0 );
+var c = new String( "" );
+```
+We know all three values are objects wrapped around falsy values. Do these objects behave as `true` or `false`
+
+```js
+var d = Boolean( a && b && c );
+d; // true
+```
+
+1. All three statements behave as `true`
+
+A falsy object can show up in JS, but they are not part of JS, browsers have created their own values behavior
+
+A falsy value is a value that looks and acts like a norma object, but when coerced it to a `boolean` it coerces to a `false` value
+
+1. Why ?
+
+    The most well-know case is `document.all` an array-like object provided to you JS program by the DOM which exposes elements in your page to your JS program.
+
+    It _used_ to behave like a normal object, it would act truthy. But not anymore
+
+    `document.all` was never "standard" and has been deprecated/abandoned
+
+    It acted like falsy because coercions of `document.all` to `boolean` were almost always used as a means of detecting old, nonstandard IE
+
+    That's how "falsy objects" were created, to avoid break legacy code on a lot of webs
+
+### Explicit Coercion
+
+#### Explicitly: String <--> Numbers
+
+To coerce between `string` and `number` we use the built-in `String(..)` and `Number(..)` functions, _important_, we don't use the `new` keyword in front of them. As such, we're not creating object wrappers
+
+Instead, we're actually _explicitly coercing_ between the two types
+
+```js
+var a = 42;
+var b = String( a );
+
+var c = "3.14";
+var d = Number( c );
+
+b; // "42"
+d; // 3.14
+```
+
+1. `String(...)` coerces from any other value to a primitive `string` value, using the rules of the `ToString`. Same goes for `Number(...)`
+
+Besides `String(..)` and `Number(..)` there are other ways to explicitly convert these values
+
+```js
+var a = 42;
+var b = a.toString();
+
+var c = "3.14";
+var d = +c;
+
+b; // "42"
+d; // 3.14
+```
+
+1. Calling `a.toString()` is very explicit, but there's some hidden implicitness here
+
+    - `toString()` cannot be called on a _primitive_ value like 42. So JS automatically "boxes" 42 in an object wrapper so that `toString()` can be called against the object
+
+    - Might be called _explicitly implicit_
+
+2. `+c` here is showing the _unary operator_ form (operator with only one operand) of the `+` operator
+
+    - Instead of performing mathematic addition (or string concatenation) the unary `+` explicitly coerces its operand `c` to a `number` value
+
+#### Explicitly: Parsing Numeric Strings
+
+A similar outcome to coercing a `string` to a `number` can be achieved by parsing a `number` out of a `string`.
+
+```js
+var a = "42";
+var b = "42px";
+
+Number( a ); // 42
+parseInt( a ); // 42
+
+Number( b ); // NaN
+parseInt( b ); // 42
+```
+
+1. Parsing a numeric value out of a string _is tolerant_ of non-numeric characters, it just stops parsing left-to-right when encountered.
+
+2. Coercion is _not tolerant_ and fails, resulting in the `NaN` value
+
+3. Parsing should not be seen as a substitute for coercion
+
+    - Parse a `string` as a `number` when you don't know/care what other non-numeric characters there may be on the right-hand side
+
+      - `parseInt()` operates only on `string` values
+
+    - Coerce a `string` to a `number` when the only acceptable values are numeric and something like `42px` should be rejected as a `number`
+
+#### Explicitly: * --> Boolean
+
+Like with `String(..)` and `Number(..)`, `Boolean(...)` without the `new` is an explicit way of forcing the `ToBoolean` coercion
+
+```js
+var a = "0";
+var b = [];
+var c = {};
+
+var d = "";
+var e = 0;
+var f = null;
+var g;
+
+Boolean( a ); // true
+Boolean( b ); // true
+Boolean( c ); // true
+
+Boolean( d ); // false
+Boolean( e ); // false
+Boolean( f ); // false
+Boolean( g ); // false
+```
+
+1. `Boolean(..)` is clearly explicit, is not common or idiomatic
+
+Just like the unary `+` operator coerces a value to a `number`
+
+The unary `!` negate operator explicitly coerces a value to a `boolean`. The problem is that it also flips the value from truthy to falsy or vice versa
+
+So, the most common way JS developers explicitly coerce to `boolean` is to use the `!!` double-negate operator, because the second `!` will flip the parity back to the original
+
+```js
+var a = "0";
+var b = [];
+var c = {};
+
+var d = "";
+var e = 0;
+var f = null;
+var g;
+
+!!a; // true
+!!b; // true
+!!c; // true
+
+!!d; // false
+!!e; // false
+!!f; // false
+!!g; // false
+```
+
+1. Any of these `ToBoolean` coercions would happen _implicitly_ without the `Boolean(...)` or `!!` if used in a `boolean` context such as an `if (...)`
+
+You may recognize this idiom
+
+```js
+var a = 42;
+var b = a ? true : false
+```
+
+1. The `? :` ternary operator will test `a` for truthiness and based on that test will either assign `true` or `false` to `b`, accordingly
+
+2. There is a hidden _implicit_ coercion, in that the `a` expression has to first be coerced to _boolean_ to perform the truthiness test. (explicitly implicit)
+
+    - This implicit should be avoid, `Boolean(a)` or `!!a` are far better as _explicit_ coercion options
+
+### Implicit Coercion
+
+The goal of _implicit_ coercion is reduce verbosity, boilerplate, and/or unnecessary implementation detail that clutters up our code with noise that distracts from the more important intent
+
+#### Implicitly: String <--> Numbers
+
+Let's explore this task with _implicit_ coercion approaches. But before we do, we have to examine some nuances of operations that will _implicitly_ force coercion
+
+The `+` operator is overloaded to serve the purposes of both `number` addition and `string` concatenation. How does JS know which type of operation you want to use?
+
+```js
+var a = "42";
+var b = "0";
+
+var c = 42;
+var d = 0;
+
+a + b; // "420"
+c + d; // 42
+```
+
+1. What causes "420" versus `42`. It's a common misconception that the difference is whether one or both of the operands is a `string`, as that means `+` will assume `string` concatenation. This is partially true, but more complicated
+
+```js
+var a = [1,2];
+var b = [3,4];
+
+a + b; // "1,23,4"
+```
+
+1. Neither of these operands is a `string` and they were both coerced to `string` and then the `string` concatenation kicked in
+
+2. If either operand to `+` is a `string` (or become one) the operation will be `string` concatenation. Otherwise, it's always numeric addition
+
+What's that mean for _implicit_ coercion? You can coerce a `number` to a `string` by simply "adding" the `number` and the empty strin `""`
+
+```js
+var a = 42;
+var b = a + ""
+b; // "42"
+```
+It's extremely common/idiomatic ti (implicitly) coerce `number` to `string` with a `+ ""` operation.
+
+Comparing this _implicit_ coercion of `a + ""` to our earlier example of `String(a)` _explicit_ coercion there's one additional quirk to be aware of
+
+1. Because of how the `ToPrimitive` abstract operation works, `a + ""` invokes `valueOf()` on the `a` value, whose return value is then finally converted to a `string` via the internal `ToString` abstract operation
+
+2. `String(a)` just invokes `toString()` directly
+
+Both approaches ultimately result in a `string`, but if you're using an `object` instead of a regular primitive `number` value, you may not get the same `string` value
+
+```js
+var a = {
+  valueOf: function() { return 42; },
+  toString: function() { return 4; }
+};
+
+a + ""; // "42"
+
+String( a ); // "4"
+```
+
+About the other direction, we can _implicitly_ coerce from `string` to `number`
+
+```js
+var a = "3.14"
+var b = a - 0
+
+b; // 3.14
+```
+
+1. The `-` operator is defined only for numeric subtraction, so `a - 0` force's a value to be coerced to a `number`.
+
+    - While far less common, `a * 1` or `a/1` would accomplish the same result, as are also only defined for numeric operations
+
+About `object` values with the `-` operator, similar to `+`
+
+```js
+var a = [3];
+var b = [1];
+
+a - b; // 2
+```
+
+1. Both `array` values have to become `number` but they end up first being coerced to `string` and then are coerced to `number`
+
+#### Implicitly: * -> Boolean
+
+What sorf of expression operations require/force (_implicitly_) a `boolean` coercion
+
+1. The test expression in an `if (...)`
+2. The test expression (second clause) in a `for (.. ; .. ; ..)`
+3. The test expression in `while(..)` and `do...while(..)` loops
+4. The test expression in (first clause) in `? :` ternary expressions
+5. The lefthand operand (which serves as a test expression) to the `||` (logical or) and `&&` (logical and) operators
+
+Any value used in these contexts that is not already a `boolean` will be _implicitly_ coerced to a `boolean` using the rules of the `ToBoolean` abstract operation
+
+```js
+var a = 42;
+var b = "abc";
+var c;
+var d = null;
+
+if (a) {
+  console.log( "yep" ); // yep
+}
+
+while (c) {
+  console.log( "nope, never runs" );
+}
+
+c = d ? a : b;
+c; // "abc"
+
+if ((a && d) || c) {
+  console.log( "yep" ); // yep
+}
+```
+
+#### Operators || and &&
+
+In JS, this operators result in the value of one (and only one) of their two operands. In other words, they select one of the two operands values
+
+```js
+var a = 42;
+var b = "abc";
+var c = null;
+
+a || b; // 42
+a && b; // "abc"
+
+c || b; // "abc"
+c && b; // null
+```
+
+1. In languages like C and PHP, those expressions result in `true` or `false`
+2. In JS (and Python and Ruby) the result comes from the values themselves
+
+3. Both `||` and `&&` perform a `boolean` test on the _first operand_. If the first operand is not already `boolean` a normal `ToBoolean` coercion occurs, so that the tet can be performed
+
+4. For `||`
+
+    - If `true` the result is the _value_ of the _first_ operand
+    - If `false`, the result is the value of the _second_ operand
+
+5. For `&&`, inversely
+
+    - If `true`, the result is the value of the _second_ operand
+    - If `false`, the result is the value of the _first_ operand
+
+The result of a `||` or `&&` expression is always the underlying value of one of the operands (_not_ the possibly coerced result of the test)
+
+The fact that operators don't actually result in `true` and `false` is possibly messing with your head, consider
+
+```js
+var a = 42;
+var b = null;
+var c = "foo";
+
+if (a && (b || c)) {
+  console.log( "yep" );
+}
+```
+
+1. This code still works the way you always though it did, except for one subtle extra detail
+
+    - The `a && (b || c)` actually results in `"foo"`, not `true`. So the `if` statement then forces the value to coerce to a `boolean`, which will be `true`
+
+#### Symbol Coercion
+
+For reasons that go beyond the scope on the book, _explicit_ coercion of a _symbol_ to a _string_ is allowed, but _implicit_ coercion is disallowed
+
+```js
+var s1 = Symbol( "cool" );
+String( s1 ); // "Symbol(cool)"
+
+var s2 = Symbol( "not cool" );
+s2 + ""; // TypeError
+```
+
+1. `symbol` values cannot coerce to `number` at all
+2. `symbol` can both _explicitly_ and _implicitly_ coerce to `boolean`
+
+### Loose Equals Versus Strict Equals
+
+1. `==` allows coercion in the equality comparison
+2. `===` disallow coercion
+
+#### Abstract Equality
+
+The `==` operator's behavior is defined as "The abstract Equality Comparison Algorithm" in section 11.9.3 of the ES5 spec. There is a comprehensive but simple algorithm that explicitly states every possible combination of types, and how the coercions should happen
+
+Basically the first clause (11.9.3.1) says that if the two values being compared are of the same type, they are simply and naturally compared via Identity. "abc" is only equal to "abc"
+
+Some minor exceptions are:
+
+1. `NaN` is never equal to itself
+2. `+0` and `-0` are equal to each other
+
+The final provision in clause (11.9.3.1) is for `==` lose equality comparison with `object` (including `function` and `array`). Two such values are only _equal_ if they are both references to _the exact same value_. No coercion occurs here
+
+- The `===` strict equality comparison is defined identically to 11.9.3.1, including the provision about two `object` values
+- `==` and `===` behave identically in the case where two `object` are being compared
+
+The rest of the algorithm specifies that if you use `==` to compare two values of different types, one or both values will need to be _implicitly_ coerced. This happens so that both values eventually end up as the same type, to then be compared
+
+##### Comparing: strings to numbers
+
+```js
+var a = 42;
+var b = "42";
+
+a === b; // false
+a == b; // true
+```
+
+1. `a===b` fails, no coercion is allowed
+2. `a==b` uses loose equality, implicit coercion will kick in. But what kind of coercion ?
+
+    - In the ES5 spec says:
+
+    1. If Type(x) is `number` and Type(y) is `string`, return the result of the comparison `x == ToNumber(y)`
+
+    2. If Type(x) is `string` and Type(y) is `number`, return the result of the comparison `ToNumber(x) == y`

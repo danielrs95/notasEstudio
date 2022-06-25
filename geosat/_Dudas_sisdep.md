@@ -21,4 +21,10 @@
 
 4. id_entrega => Ya se entrego al ventero
 5. id_descongestion => Se hizo la descongestion
-6. id_retencion => si existe es que esta en inventario, si no existe no se ha entregado o esta en proceso
+6. id_retención => si existe es que esta en inventario, si no existe no se ha entregado o esta en proceso
+
+### Descongestion bodegas
+
+1. Crear un campo en acta inventario que se llame serial, debe ser único
+2. Con ese campo se va a "filtrar" al momento de crear una descongestion
+3. Añadir posibilidad de arrastrar un excel al momento de crear descongestion (upload de antdesign, cargar un archivo)
