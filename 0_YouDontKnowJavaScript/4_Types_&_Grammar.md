@@ -1681,3 +1681,7 @@ a || b && c; // ???
 ```
 
 We're going to understand what rules govern how the operators are processed when there's more than one present in an expression [link](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_Precedence#table)
+
+#### Short Circuited
+
+For both `&&` and `||` the righthand operand will not be evaluated if the lefthand operand is sufficient to determine the outcome of the operation.
