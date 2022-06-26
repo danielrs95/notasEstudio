@@ -585,7 +585,7 @@ The `Error()` constructor behaves the same with the `new` keyword present or omi
 
 The main reason you'd want to create an error object is that it captures the current execution stack context into the object. This stack context includes the function call stack and the line number where the error object was created
 
-You would tipically use such an error object with the `throw` operator
+You would typically use such an error object with the `throw` operator
 
 ```js
 function foo(x) {
@@ -871,6 +871,7 @@ var a = new Boolean( false );
 var b = new Number( 0 );
 var c = new String( "" );
 ```
+
 We know all three values are objects wrapped around falsy values. Do these objects behave as `true` or `false`
 
 ```js
@@ -1068,13 +1069,14 @@ a + b; // "1,23,4"
 
 2. If either operand to `+` is a `string` (or become one) the operation will be `string` concatenation. Otherwise, it's always numeric addition
 
-What's that mean for _implicit_ coercion? You can coerce a `number` to a `string` by simply "adding" the `number` and the empty strin `""`
+What's that mean for _implicit_ coercion? You can coerce a `number` to a `string` by simply "adding" the `number` and the empty string `""`
 
 ```js
 var a = 42;
 var b = a + ""
 b; // "42"
 ```
+
 It's extremely common/idiomatic ti (implicitly) coerce `number` to `string` with a `+ ""` operation.
 
 Comparing this _implicit_ coercion of `a + ""` to our earlier example of `String(a)` _explicit_ coercion there's one additional quirk to be aware of
@@ -1122,7 +1124,7 @@ a - b; // 2
 
 #### Implicitly: * -> Boolean
 
-What sorf of expression operations require/force (_implicitly_) a `boolean` coercion
+What sort of expression operations require/force (_implicitly_) a `boolean` coercion
 
 1. The test expression in an `if (...)`
 2. The test expression (second clause) in a `for (.. ; .. ; ..)`
@@ -1259,3 +1261,423 @@ a == b; // true
     1. If Type(x) is `number` and Type(y) is `string`, return the result of the comparison `x == ToNumber(y)`
 
     2. If Type(x) is `string` and Type(y) is `number`, return the result of the comparison `ToNumber(x) == y`
+
+Clearly the spec says the "42" value os coerced to a `number` for the comparison
+
+##### Comparing: anything to boolean
+
+One of the biggest gotchas with the _implicit_ coercion of `==` loose equality pops up when you compare a value directly to `true` or `false`
+
+```js
+var a = "42";
+var b = true;
+
+a == b; // false
+```
+
+Quoting the spec, clauses 11.9.3.6-7:
+
+1. If `Type(x)` is `boolean`, return the result of `ToNumber(x) == y`
+2. If `Type(y)` is `boolean`, return the result of `x == ToNumber(y)`
+
+```js
+var x = true;
+var y = "42";
+
+x == y; // false
+```
+
+1. `Type(x)` is `boolean`, it performs `ToNumber(x)` which coercer `true` to `1`
+2. We have `1 == "42"` we coerce again
+3. We end up with `1 == 42` which is `false`
+
+In other words, the value 42 is neither `== true` nor `== false`. ` "42" == true ` is not performing a boolean test/coercion at all
+
+"42" _is not_ being coerced to a `boolean (true)`, but instead `true` is being coerced to a `1`, and then "42" is being coerced to `42`
+
+What is relevant is to understand how the `==` comparison algorithm behaves with all the different type combinations. As it regards a `boolean` value on either side of the `==`, a `boolean` always coerces to a `number` first
+
+```js
+var a = "42";
+
+// bad (will fail!):
+if (a == true) {
+  // ..
+}
+
+// also bad (will fail!):
+if (a === true) {
+  // ..
+}
+
+// good enough (works implicitly):
+if (a) {
+  // ..
+}
+
+// better (works explicitly):
+if (!!a) {
+  // ..
+}
+
+// also great (works explicitly):
+if (Boolean( a )) {
+  // ..
+}
+```
+
+##### Comparing nulls to undefineds
+
+1. If x is null and y is undefined, return `true`
+2. If x is undefined and y is null, return `true`
+
+`null` and `undefined` when compared with `==` equate to each other and no other values in the entire language
+
+`null` and `undefined` can be treated as indistinguishable for comparison purposes, if you use the `==` operator to allow their mutual _implicit_ coercion
+
+```js
+var a = null;
+var b;
+
+a == b; // true
+a == null; // true
+b == null;// true
+
+a == false; // false
+b == false; // false
+a == "";// false
+b == "";// false
+a == 0;// false
+b == 0;// false
+```
+
+The coercion between `null` and `undefined` is safe and predictable, use this coercion to allow `null` and `undefined` to be indistinguishable and thus treated as the same value
+
+```js
+var a = doSomething()
+
+if ( a==null ) {
+  // ...
+}
+```
+
+1. `a == null` will pass only if `doSomething()` returns `null` or `undefined`
+
+##### Comparing objects to non objects
+
+If `object/function/array` is compared to a simple scalar primitive (`string, number, boolean`)
+
+1. If `Type(x)` is `string or number` return `x == ToPrimitive(y)`
+2. If `Type(x)` is `object` return `ToPrimitive(x) == y`
+
+```js
+var a = 42l
+var b = [42]
+
+a == b; // true
+```
+
+1. The `[42]` value has its `ToPrimitive` abstract operation called, which results in the "42" value
+2. From there, `"42" == 42` already covered, becomes true
+
+```js
+var a = "abc"
+var b = Object(a); // same as new String(a)
+
+a === b // false
+a == b // true
+```
+
+1. `a == b` is `true` because `b` is coerced (unboxed, unwrapped) via `ToPrimitive` to its underlying "abc"
+
+#### Safely using implicit coercion
+
+1. If either side of the comparison can have `true` or `false` never use `==`
+2. If either side of the comparison can have `[]`, `""`, or `0`, don't use `==`
+
+## 5. Grammar
+
+### Statements & Expressions
+
+- A _sentence_ is one complete formation of words, that expresses a thought
+- It's comprised of one or more _phrases_ each of which can be connect with _punctuation_ marks or conjunctions (and, or, etc)
+
+_statements_ are sentences, _expressions_ are phrases, and _operators_ are conjunctions/punctuation
+
+Every expression in JS can be evaluated down to a single, specific value result
+
+```js
+var a = 3 * 6;
+var b = a;
+b;
+```
+
+1. `3 * 6` is an expression
+2. `a` on the second line is also an expression
+3. `b` on the third line is an expression
+
+4. Each of the three lines is a _statement_ containing expressions
+
+    - `var a = 3 * 6` and `var b = a` are called _declaration statements_. They each declare a variable (and optionally assign a value)
+
+    - `a = 3 * 6` and `b = a` assignments (minus the `var`) are called _assignment expressions_
+
+    - `b` is an expression and statement by itself, referred as _expression statement_
+
+#### Statement Completion Values
+
+It's a fairly little known fact that statements all have completion values even if that is just `undefined`
+
+We need to consider other types of statement completion values, any regular `{..}` has a completion value of the value of the completion value of its last contained statement/expression
+
+```js
+var b;
+
+if (true) {
+  b = 4+ 38
+}
+```
+
+If you type that into a console, you will see 42 since 42 is the completion value of the `if`  block, which took on the completion value of its last expression statement `b = 4 + 38`
+
+The completion value of a block is like and _implicit return_ of the last statement value in the block
+
+```js
+var a, b;
+
+a = if (true) {
+  b = 4 + 38;
+}
+```
+
+We can't capture the completion value of a statement and assign it into another variable, ES7 has a proposal called the "do expression"
+
+```js
+var a, b;
+
+a = do {
+  if (true) {
+    b = 4 + 38;
+  }
+}
+
+a; // 42
+```
+
+1. `do {..}` expression executes a block and the final statement completion value inside the block becomes the completion value of the `do` expressions which can then be assigned to `a`
+
+The general idea is to be able to treat statements as expressions, without needing to wrap them in an inline function expression and perform an explicit `return`
+
+#### Expression Side Effects
+
+Most expressions don't have side effects, the most common example of an expression with possible side effects is a function call expression
+
+```js
+function foo() {
+   a = a + 1;
+}
+
+var a = 1;
+foo(); // result: undefined, side effect: changed a
+```
+
+There are other side-effects expressions
+
+```js
+var a = 42;
+var b = a++;
+
+a; // 43
+b; // 42
+```
+
+1. The expression `a++` has 2 separate behaviors
+
+    - First, returns the current value of `a` which then gets assigned to `b`
+    - Second it changes the value of `a` itself, incrementing it by one
+
+The `++` increment operator and the `--` decrement operator are both unary operators which can be used in either a before or after
+
+```js
+var a = 42;
+
+a++; // 42
+a; // 43
+
+++a; // 44
+a; // 44
+```
+
+1. _prefix_ `++a`, the side effect (incrementing) happens _before_ the value is returned from the expression
+
+The `,` statement-series comma operator allows you to string together multiple standalone expression statements into a single statement
+
+```js
+var a = 42, b;
+b = (a++, a)
+
+a; // 43
+b; // 43
+```
+
+1. The expression `a++, a` means that the second `a` statement expression gets evaluated _after_ the side effect
+
+#### Contextual Rules
+
+There are quite a few places in the JS grammar rules where the same syntax means different things depending on where/how it's used
+
+##### Curly braces
+
+There's 2 main places that a pair of curly braces will show up
+
+###### Object literals
+
+```js
+// assume there is a bar() function defined
+
+var a = {
+  foo: bar(),
+}
+```
+
+How do we know is an `object` literal?. Because the `{..}` pair is a value that's getting assigned to `a`
+
+###### _Labels_
+
+```js
+// assume there is a bar() function defined
+
+{
+  foo: bar()
+}
+```
+
+Here `{..}` is just a regular code block, it's valid grammar
+
+The code block is functionally pretty much identical to the code block being attached to some statement like a `for/while` loop or an `if` conditional
+
+But being valid code, what's `foo: bar()` syntax ?
+
+It's because a feature in JS called _labeled statements_, `foo` is a label for the statement `bar()`
+
+If JS had a `goto` statement, you could theoretically be able to say `foto foo` and have execution jump to that location in code
+
+JS does support a limited, special form of `goto` labeled jump. Both the `continue` and `break` statements can optionally accept a specified label, in which case the program flow "jumps" kind of like a `goto`
+
+```js
+// `foo` labeled-loop
+foo: for (var i=0; i<4; i++) {
+  for (var j=0; j<4; j++) {
+    // whenever the loops meet, continue outer loop
+    if (j == i) {
+      // jump to the next iteration of
+      // the `foo` labeled-loop
+      continue foo;
+    }
+
+    // skip odd multiples
+    if ((j * i) % 2 == 1) {
+      // normal (nonlabeled) `continue` of inner loop
+      continue;
+    }
+
+    console.log( i, j );
+  }
+}
+
+// 1 0
+// 2 0
+// 2 1
+// 3 0
+// 3 2
+```
+
+1. `continue foo` does not mean "go to the foo labeled position to continue", but rather, "continue the loop that is labeled foo with its nex iteration"
+
+###### Object destructuring
+
+With ES6 another place you will see `{..}` is with _destructuring assignments_
+
+```js
+function getData() {
+  // ...
+  return {
+    a: 42,
+    b: 'foo',
+  };
+};
+
+var { a,b } = getData();
+console.log(a,b); // 42 'foo'
+```
+
+Can also be used for named function arguments
+
+```js
+function foo({a, b, c}) {
+  // no need for:
+  // var a = obj.a, b = obj.b, c = obj.c
+  console.log(a,b,c)
+}
+
+foo({
+  c: [1,2,3],
+  a: 42,
+  b: 'foo'
+})  // 42 "foo" [1, 2, 3]
+```
+
+###### else if and optional blocks
+
+It's a common misconception that JS has an `else if` clause, because you can do
+
+```js
+if (a) {
+  // ..
+}
+else if (b) {
+  // ..
+}
+else {
+  // ...
+}
+```
+
+1. A hidden characteristic of the JS grammar, there is no `else if`
+2. `if` and `else` statements are allowed to omit the `{..}` around their attached block if they only contain a single statement
+
+```js
+if (a) doSomething(a);
+
+// Same as
+if (a) { doSomething(a) };
+```
+
+The exact same grammar rule applies to the `else` clause, so the `else if` is actually parsed as:
+
+```js
+if (a) {
+  // ..
+}
+else {
+  if (b) {
+    // ..
+  }
+  else {
+    // ..
+  }
+}
+```
+
+### Operator Precedence
+
+```js
+var a = 42;
+var b = "foo";
+var c = [1,2,3];
+
+a && b || c; // ???
+a || b && c; // ???
+```
+
+We're going to understand what rules govern how the operators are processed when there's more than one present in an expression [link](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_Precedence#table)
