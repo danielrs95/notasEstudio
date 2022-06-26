@@ -126,7 +126,7 @@ greet("Maddison", new Date());
 ```
 
 1. Our `person` and `date` parameters no longer have type annotations
-2. Our `template string` that used backticks was converted to plain strings
+2. Our `template string` that used backtick was converted to plain strings
 
 Remember, type annotations aren't part of JS when we compile those annotations get erased -> Type annotations never change the runtime behavior of your program
 
@@ -161,7 +161,6 @@ By default, `null` and `undefined` are assignable to any other type, forgetting 
 3. `boolean` is for the two values `true` and `false`
 
 - The type names `String`, `Number`, and `Boolean` with capital letters are legal but refer to some special built-in types.
-
 
 ---
 
@@ -248,7 +247,7 @@ function loggingIdentity<Type>(arg: Type[]): Type[] {
 }
 ```
 
-1. `loggindIdentity` is a generic fucntion that
+1. `loggingIdentity` is a generic function that
    1. takes a type parameter `Type`
    2. an argument `arg` which is an array of `Type`s and returns an array of `Type`s
 
