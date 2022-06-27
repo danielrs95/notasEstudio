@@ -1685,3 +1685,124 @@ We're going to understand what rules govern how the operators are processed when
 #### Short Circuited
 
 For both `&&` and `||` the righthand operand will not be evaluated if the lefthand operand is sufficient to determine the outcome of the operation.
+
+1. `a && b`, `b` is not evaluated if `a` is falsy, because the result of the `&&` operand is already certain
+2. `a || b`, if `a` is truthy, the result of the operand is already certain, so there's no reason to check `b`
+
+```js
+function doSomething(opts) {
+  if (opts && opts.cool) {
+    // ..
+  }
+}
+```
+
+1. The first `opts` acts as sort of a guard
+
+### Errors
+
+#### Using Variables Too Early
+
+ES6 defines a new concept called the _TDZ (Temporal Dead Zone)_, refers to places in code where a variable reference cannot yet be made, because it hasn't reached its required initialization
+
+```js
+{
+  a = 2; // ReferenceError!
+  let a;
+}
+```
+
+1. `a = 2` is accessing the variable which is indeed block-scoped to the `{..}` block, before it's been initialized by the `let a` declaration
+
+### Function Arguments
+
+Another example of TDZ violation can be seen with ES6 default parameter values
+
+```js
+var b = 3;
+
+function foo(a = 42, b = a + b + 5) {
+  // ..
+}
+```
+
+1. The `b` reference in the assignment would happen in the TDZ for the parameter `b` (not pull in the outer `b` reference), so it will throw an error
+
+When using ES6 default parameter values, the default value is applied to the parameter if you either omit or pass an `undefined` value in its place
+
+```js
+function foo(a = 42, b = a + 1) {
+  console.log(a,b);
+}
+
+foo(); // 42 43
+foo(undefined); // 42 43
+foo(5); // 5 6
+foo(void 0, 7); // 42 7
+foo(null); // null 1
+```
+
+1. `null` is coerced to a 0 in the expression `a + 1`
+
+From the ES6 default parameter values perspective, there's no difference between omitting an argument and passing an `undefined` value. There's a way to detect the difference in some cases
+
+```js
+function foo(a = 42, b = a + 1) {
+  console.log(
+    arguments.length, a, b,
+    arguments[0], arguments[1],
+  );
+}
+
+foo(); // 0 42 43 undefined undefined
+foo( 10 ); // 1 10 11 10 undefined
+foo( 10, undefined ); // 2 10 11 10 undefined
+foo( 10, null ); // 2 10 null 10 null
+```
+
+1. Even though the default parameter values are applied to the `a` and `b`, if no arguments were passed in those slots, the `arguments` array will not have entries
+
+2. If you pass `undefined` argument explicitly, an entry will exist in the `arguments` array for that argument, but it will be `undefined` and not (necessarily) the same as the default value that was applied to the named parameter for that same slot
+
+### try...finally
+
+The code in `finally` always run, no matter what, and it always runs right after the `try` and `catch` finish. It's like a callback function that will always run regardless of how the rest of the block behaves
+
+When `try` has a `return`, does the calling code that receives that value run before or after the `finally`
+
+```js
+function foo() {
+  try {
+    return 42;
+  }
+  finally {
+    console.log("Hello")
+  }
+
+  console.log('Never runs')
+}
+console.log(foo())
+// Hello
+// 42
+```
+
+1. `return 42` runs right away, which sets up the completion value from th `foo()` call
+2. This action completes the `try` and the `finally` runs next
+3. Only then is the `foo()` function complete
+
+If an exception is thrown inside a `finally` clause, it will override as the primary completion of that function. If a previous `return` in the `try` had set a completion value for the function, that value will be abandones
+
+```js
+function foo() {
+  try {
+    return 42
+  } finally {
+    throw "Oops"
+  }
+}
+console.log(foo())
+// Uncaught Exception: Oops
+```
+
+1. Other control statements like `continue` & `break` have similar behavior to `return` and `throw`
+2. A `return` inside a `finally` also override a previous `return` from the `try` or `catch`, but only if `return` is explicitly called
