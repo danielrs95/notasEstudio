@@ -117,7 +117,7 @@ while (true) {
 ```
 
 1. Simplified pseudocode
-2. There's a continous loop represented by the `while` loop, each iteration of this loops is called a _tick_
+2. There's a continuos loop represented by the `while` loop, each iteration of this loops is called a _tick_
 
 3. For each tick, if there's an event on queue, it's taken off and executed. These events are the function callbacks
 
@@ -129,11 +129,11 @@ while (true) {
 
 _Async_ and _parallel_ are different, _async_ is about the gap between _now_ and _later_
 
-Parallel is about things being able to occur simultaneosly
+Parallel is about things being able to occur simultaneously
 
 The most common tools for parallel computing are processes and threads
 
-Processes and threads execute independently and may execute simultaneosly: on separate processors, or even separate computers, but multiple threads can share the memory of a single process
+Processes and threads execute independently and may execute simultaneously: on separate processors, or even separate computers, but multiple threads can share the memory of a single process
 
 An event loop breaks its work into tasks and executes them in serial, disallowing parallel access and changes to shared memory
 
@@ -230,7 +230,7 @@ ajax( "http://some.url.2", bar );
         b = a * 2;
         ```
 
-    Chunk 2 and 3 may happen in either-first order, so there are 2 posible outcomes
+    Chunk 2 and 3 may happen in either-first order, so there are 2 possible outcomes
 
       ```js
       // Outcome 1
@@ -270,13 +270,13 @@ ajax( "http://some.url.2", bar );
       b; // 180
       ```
 
-Two outcomes from the same code means we still have nondeterminism, but it's at the fuinction (event) ordering level rather than at the statement ordering level
+Two outcomes from the same code means we still have nondeterminism, but it's at the function (event) ordering level rather than at the statement ordering level
 
 In other words, it's more deterministic than threads would have been
 
 ### Concurrency
 
-Concurrency is when two or more "processes" are executing simultaneosly over the same period, regardless of wheter their individual operations happen in parallel or not
+Concurrency is when two or more "processes" are executing simultaneously over the same period, regardless of whether their individual operations happen in parallel or not
 
 You can think of concurrency as process-level or task-level parallelism, as opposed to operation-level parallelism (separate-processor threads)
 
@@ -308,7 +308,7 @@ ajax( "http://some.url.2", bar );
 
 ### Interaction
 
-More commonly, concurrent "processes" will by necessity interact, indirectly through scope and/or the DOM. You need to coordinate these interactions to prevent "race conditions" as decribed earlier
+More commonly, concurrent "processes" will by necessity interact, indirectly through scope and/or the DOM. You need to coordinate these interactions to prevent "race conditions" as described earlier
 
 ```js
 var res = [];
@@ -322,8 +322,8 @@ ajax( "http://some.url.1", response );
 ajax( "http://some.url.2", response );
 ```
 
-1. The concurrent processes are the two `response()` calls that will be made to handle the ajax responses, thay can happen in either first order
-2. Somethimes `url1` will end up on `res[0]`, or on `res[1]` depending on which call finishes first
+1. The concurrent processes are the two `response()` calls that will be made to handle the ajax responses, they can happen in either first order
+2. Sometimes `url1` will end up on `res[0]`, or on `res[1]` depending on which call finishes first
 3. This is a race condition bug, and nondeterminism
 
 To address this race condition, you can coordinate ordering interaction
@@ -387,7 +387,7 @@ Callbacks are not without their shortcomings.
 
 There are several variations of callback design that have attempted to address some of the trust issues
 
-Regarding more graceful error handling, some API designs provid for split callbacks, one for success notification, one for error notification
+Regarding more graceful error handling, some API designs provide for split callbacks, one for success notification, one for error notification
 
 ```js
 function success(data) {
@@ -403,7 +403,7 @@ ajax( "http://some.url.1", success, failure );
 
 1. In API's of this design, often `failure()` is optional, and if not provided it will be assumed you want the errors swallowed
 
-2. This spli-callback design is what the ES6 Promises API uses
+2. This split-callback design is what the ES6 Promises API uses
 
 Another common callback pattern is called _error-first style_ (also _Node style_, is the convention used across nearly all Nodejs APIs).
 
@@ -445,7 +445,7 @@ The story with callbacks is that they can do pretty much anything you want, but 
 
     - This control transfer leads us to a list of trust issues, such as whether the callbacks is called more times than we expect
 
-5. Inventing ad hoc logic to solve these trus issues is possible, but it's more difficult than it should be and produces clunkier and harder to maintain code
+5. Inventing ad hoc logic to solve these trust issues is possible, but it's more difficult than it should be and produces clunkier and harder to maintain code
 
 6. We need a generalized solution to all of the trust issues, that can be reused for many callbacks as we want without the extra boilerplate
 
@@ -455,7 +455,7 @@ The issue we want to address first is the _inversion of control_
 
 Remember, we wrap up the _continuation_ of our program in a callback function, and hand that callback to another party and hope that it will do the right thing
 
-We want to say "here's what happens _later_ afther the current step finishes"
+We want to say "here's what happens _later_ after the current step finishes"
 
 What if we could uninvert that _inversion of control_ ?
 
@@ -577,7 +577,7 @@ add( fetchX(), fetchY() )
 
 4. Inside `add(..)`, the `Promise.all([..])` call create a promise, that is waiting on `promiseX` and `promiseY` to resolve
 
-    - The chained call to `.then(..)` creates another promise, which the `return values[0] + values[1]` inmmediately resolves with the result of the addition
+    - The chained call to `.then(..)` creates another promise, which the `return values[0] + values[1]` immediately resolves with the result of the addition
 
     - The `then(..)` call we chain off the end of the `add(..)` call is actually operating on that second promise returned, rather than the first one create by `Promise.all([..])`
 
@@ -585,7 +585,7 @@ add( fetchX(), fetchY() )
 
 It's possible that the resolution of a Promise is rejection instead of fulfillment, a rejection value can either be set directly by the program logic, or it can result implicitly from a runtime exception
 
-With Promises, the `then(..)` call can actually take two functions, the first for fullfilment and the second for rejection
+With Promises, the `then(..)` call can actually take two functions, the first for fulfillment and the second for rejection
 
 ```js
 add( fetchX(), fetchY() )
@@ -606,7 +606,7 @@ add( fetchX(), fetchY() )
 
 Because Promises encapsulate the time-dependent state -- waiting on the fulfillment or rejection of the underlying value -- from the outside, the Promise itself is _time-independent_, and thus Promises can be composed in predictable ways regardless of the timing or outcome underneath
 
-Once a Promise is resolved, it stays that way forecer, it becomes an immutable value, and can then be obsered as many times as necessary
+Once a Promise is resolved, it stays that way forever, it becomes an immutable value, and can then be observed as many times as necessary
 
 That's one of the most powerful and important concepts to understand about Promises.
 
@@ -614,7 +614,7 @@ That's one of the most powerful and important concepts to understand about Promi
 
 There's another way to think of the resolution of a Promise: as a flow-control mechanism -- a temporal this-then-that -- for two or more steps in an asynchronous task
 
-Let's imagine calling a function `foo(..)` to perform some task. We dont know about any of its details, nor do we care. It may complete right away, or take a while
+Let's imagine calling a function `foo(..)` to perform some task. We don't know about any of its details, nor do we care. It may complete right away, or take a while
 
 We just simply need to know when `foo(..)` finishes so that we can move on to our next task. We did like a way to be notified of `foo(..)` completion so that we can continue
 
@@ -671,7 +671,7 @@ evt.on( "failure", function(err){
 
 1. `foo(..)` expressly creates an event subscription capability to return back, and the calling code receives and registers the 2 event handlers against it
 
-2. The inversion from normal callback-oriented code should be obvios and it's intentional.
+2. The inversion from normal callback-oriented code should be obvious and it's intentional.
 
     - Instead of passing the callbacks to `foo(..)`, it returns an event capability we call `evt`, which receives the callbacks
 
@@ -769,9 +769,9 @@ p.then( baz, oopsBaz );
 
 1. Instead of passing the `p` promise to `bar(..)` we use the promise control when `bar(..)` will get executed, if ever. The primary difference is in the error handling
 
-In the first approach, `bar(..)` is called regardless of wheter `foo(..)` succeds or fails, and it handles its own fallback logic if `foo(..)` failed
+In the first approach, `bar(..)` is called regardless of whether `foo(..)` succeeds or fails, and it handles its own fallback logic if `foo(..)` failed
 
-In the second snippet, `bar(..)` only gets called if `foo(..)` succeds, otherwhise `oppsBar(..)` gets called
+In the second snippet, `bar(..)` only gets called if `foo(..)` succeeds, otherwise `oopsBar(..)` gets called
 
 In either case, the promise `p` that comes from `foo(..)` is used to control what happens next
 
@@ -805,7 +805,7 @@ else {
 }
 ```
 
-1. If you try to fulfill a Promise with any object/function value that happens to have a `then(..)` function on it, but you weren't intending it to be trated as a Promise/thenable you're out of luck, it will automatically be recognized as thenable and treated with special rules
+1. If you try to fulfill a Promise with any object/function value that happens to have a `then(..)` function on it, but you weren't intending it to be treated as a Promise/thenable you're out of luck, it will automatically be recognized as thenable and treated with special rules
 
 ### Promise Trust
 
@@ -855,7 +855,7 @@ p.then( function(){
 // A B C
 ```
 
-1. `C` cannot interrupt and preced `B`, by virtue of how Promises are defined to operate
+1. `C` cannot interrupt and precede `B`, by virtue of how Promises are defined to operate
 
 ##### Promise Scheduling Quirks
 
@@ -899,7 +899,7 @@ Nothing (not even a JS error) can prevent a Promise from notifying you of its re
 
 If you register both fulfillment and rejection callbacks for a Promise, and the Promise gets resolved, one of 2 callbacks will always be called
 
-What if the Promise itself never gets resolved iether way? Promises provide an answer for, using a higher level abstraction called a race
+What if the Promise itself never gets resolved either way? Promises provide an answer for, using a higher level abstraction called a race
 
 ```js
 // a utility for timing out a Promise
@@ -929,3 +929,198 @@ Promise.race( [
 ```
 
 1. We can ensure a signal as to the outcome of `foo()`, to prevent it from hanging our program indefinitely
+
+### Calling Too Few or Too Many Times
+
+By definition, _one_ is the appropriate number of times for the callback to be called. The _too few_ case would be zero calls, the same as never case
+
+The _too many_ case is easy to explain, Promises are defined so that they can only be resolved once
+
+If for some reason the Promise creation code tries to call `resolve(..)` or `reject(..)` multiple times, the Promise will accept only the first resolution and will silently ignore any subsequent attempts
+
+Because a Promise can only be resolved once, any `then(..)` registered callbacks will only ever be called once (each)
+
+### Failing to Pass Along Any Parameters/Environment
+
+Promises can have, at most, one resolution value, fulfillment or rejection
+
+If you don't explicitly resolve with a value either way, the value is `undefined`.
+
+Whatever the value, it will always be passed to all registered callbacks, either now or in the future
+
+If you call `resolve(..)` or `reject(..)` with multiple parameters, all subsequent parameters beyond the first will be silently ignored
+    - This constitutes an invalid usage of the Promise mechanism
+
+If you want to pass along multiple values, you must wrap them in another single value that you pass, like an `array` or `object`
+
+### Swallowing Any Errors/Exceptions
+
+If you reject a Promise with a reason (aka error message), that value is passed to the rejection callback
+
+If at any point in the creation of a Promise, or in the observation of its resolution, a JS exception error occurs (`TypeError`, `ReferenceError`), that exception will be caught, and it will force the Promise in question to become rejected
+
+```js
+var p = new Promise( function(resolve,reject){
+  foo.bar();  // `foo` is not defined, so error!
+  resolve( 42 );  // never gets here :(
+} );
+
+p.then(
+  function fulfilled(){
+    // never gets here :(
+  },
+  function rejected(err){
+    // `err` will be a `TypeError` exception object
+    // from the `foo.bar()` line.
+  }
+);
+```
+
+1. The JS exception from `foo.bar()` becomes a Promise rejection that you can catch and respond to
+
+2. Promises turn even JS exceptions into asynchronous behavior, thereby reducing the race condition
+
+What happens if a Promise is fulfilled, but there's a JS exception error during the observation (in a `then(..)` registered callback)
+
+Even those aren't lost
+
+```js
+var p = new Promise( function(resolve,reject){
+  resolve( 42 );
+} );
+
+p.then(
+  function fulfilled(msg){
+    foo.bar();
+    console.log( msg );  // never gets here :(
+  },
+  function rejected(err){
+    // never gets here either :(
+  }
+);
+```
+
+1. It looks like the exception from `foo.bar()` got swallowed. It didn't, we have failed to listen for it
+
+2. The `p.then(..)` call itself returns another promise, and it's _that_ promise that will be rejected with the `TypeError` exception
+
+3. Why couldn't it just call the error handler we have defined here?
+
+    - It would violate the fundamental principle that Promises are _immutable_ once resolved
+
+    - `p` was already fulfilled to the value `42`, it can't later be changed to a rejection just because there's an error in observing `p`'s resolution
+
+### Trustable Promise ?
+
+Promises don't get rid of callbacks at all, they just change where the callback is passed to.
+
+Instead of passing a callback to `foo(..)`, we get something back from`foo(..)` and we pass the callback to that _something_
+
+How can we be sure the _something_ we get back is in fact a trustable Promise?
+
+Promises have a solution to this issue, `Promise.resolve(..)`
+
+If you pass an immediate, non-Promise, non-thenable value to `Promise.resolve(..)` you get a Promise that's fulfilled with that value
+
+```js
+var p1 = new Promise( function(resolve,reject){
+  resolve( 42 );
+} );
+
+var p2 = Promise.resolve( 42 );
+```
+
+1. `p1` and `p2` will behave basically identically
+
+If you pass a genuine Promise to `Promise.resolve(..)` you just get the same promise back
+
+```js
+var p1 = Promise.resolve( 42 );
+
+var p2 = Promise.resolve( p1 );
+
+p1 === p2; // true
+```
+
+Even more importantly, if you pass a non-PRomise thenable value to `Promise.resolve(..)` it will attempt yo unwrap that value, until a concrete final non-Promise-like value is extracted
+
+```js
+var p = {
+  then: function(cb) {
+    cb( 42 );
+  }
+};
+
+// this works OK, but only by good fortune
+p
+.then(
+  function fulfilled(val){
+    console.log( val ); // 42
+  },
+  function rejected(err){
+    // never gets here
+  }
+);
+```
+
+1. `p` is a thenable, but it's not a genuine Promise
+
+If you had something like this, it would not work
+
+```js
+var p = {
+  then: function(cb,error_cb) {
+    cb( 42 );
+    error_cb( "evil laugh" );
+  }
+};
+
+p
+.then(
+  function fulfilled(val){
+    console.log( val ); // 42
+  },
+  function rejected(err){
+    // oops, shouldn't have run
+    console.log( err ); // evil laugh
+  }
+);
+```
+
+1. `p` is thenable but it'snot a well behaved of a promise
+
+We can pass either versions of `p` to `Promise.resolve(..)` and we will get the normalized, safe result
+
+```js
+Promise.resolve( p )
+.then(
+  function fulfilled(val){
+    console.log( val ); // 42
+  },
+  function rejected(err){
+    // never gets here
+  }
+);
+```
+
+1. `Promise.resolve(..)` will accept any thenable, and will unwrap it to its non-thenable value
+
+2. You get a real, genuine Promise, one that you can trust
+
+If we're calling a `foo(..)` utility and we are not sure we can trust its return value to be a Promise, but we know it's a thenable
+
+```js
+// don't just do this:
+foo( 42 )
+.then( function(v){
+  console.log( v );
+} );
+
+// instead, do this:
+Promise.resolve( foo( 42 ) )
+.then( function(v){
+  console.log( v );
+} );
+```
+
+1. Another beneficial side effect of wrapping `Promise.resolve(..)` around any functions return value is that is an easy way to normalize that function call into a well-behaving async task
