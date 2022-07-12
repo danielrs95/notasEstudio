@@ -1230,3 +1230,272 @@ p.then( function(v){
 ```
 
 1. We can construct a sequence of however many async steps we want, and each step can delay the next step as necessary
+
+Let's consider making Ajax requests:
+
+```js
+// assume an `ajax( {url}, {callback} )` utility
+
+// Promise-aware ajax
+function request(url) {
+  return new Promise( function(resolve,reject){
+    // the `ajax(..)` callback should be our
+    // promise's `resolve(..)` function
+    ajax( url, resolve );
+  } );
+}
+```
+
+We first define a `request(..)` utility that constructs a promise to represent the completion of the `ajax(..)` call
+
+```js
+request( "http://some.url.1/" )
+.then( function(response1){
+  return request( "http://some.url.2/?v=" + response1 );
+} )
+.then( function(response2){
+  console.log( response2 );
+} );
+```
+
+1. Using the Promise that `request(..)` return we create the first step in our chain by calling it with the first URL
+
+    - We chain off that returned promise with the first `then(..)`
+
+2. Once `response1` comes back, we use that value to construct a second URL and make a second `request(..)` call
+
+    - That second `request(..)` promise is returned so that the third step in our async flow control waits for that Ajax call to complete
+
+    - Finally, we print `response2` once it returns
+
+The Promise chain in not only a flow control that express a multistep async sequence, but also acts as a message channel to propagate messages from step to step
+
+- If something went wrong in one of the steps of the Promise chain, an error/exception is on a per-Promise basis
+
+  - It's possible to catch such an error at any point in the chain, and that catching acts sort of "reset" the chain back to normal operation an that point
+
+```js
+// step 1:
+request( "http://some.url.1/" )
+
+// step 2:
+.then( function(response1){
+  foo.bar(); // undefined, error!
+
+  // never gets here
+  return request( "http://some.url.2/?v=" + response1 );
+} )
+
+// step 3:
+.then(
+  function fulfilled(response2){
+    // never gets here
+  },
+  // rejection handler to catch the error
+  function rejected(err){
+    console.log( err );  // `TypeError` from `foo.bar()` error
+    return 42;
+  }
+)
+
+// step 4:
+.then( function(msg){
+  console.log( msg );    // 42
+} );
+```
+
+1. When the error occurs in step 2, the rejection handler in step 3 catches it
+
+    - The return value, if any, from that rejection handler fulfills the promise for the next step (4) such that the chain is now back in a fulfillment state
+
+2. When returning a promise from a fulfillment handler, it's unwrapped and can delay the next step
+
+    - If the `return 42` in step 3 instead returned a promise, that promise could delay step 4.
+
+    - A thrown exception inside either the fulfillment or rejection handler of a `then(..)` call causes the next chained promise to be immediately rejected with that exception
+
+If you call `then(..)` on a promise, and you only pass a fulfillment handler to it, an assumed rejection handler is substituted
+
+```js
+var p = new Promise( function(resolve,reject){
+  reject( "Oops" );
+} );
+
+var p2 = p.then(
+  function fulfilled(){
+    // never gets here
+  }
+  // assumed rejection handler, if omitted or
+  // any other non-function value passed
+  // function(err) {
+  //     throw err;
+  // }
+);
+```
+
+1. The assumed rejection handler simply rethrows the error, which ends up forcing `p2` to reject with the same reason
+
+If a proper valid function is not passed as the fulfillment handler parameter to `then(..)`, there's also a default handler
+
+```js
+var p = Promise.resolve( 42 );
+
+p.then(
+  // assumed fulfillment handler, if omitted or
+  // any other non-function value passed
+  // function(v) {
+  //     return v;
+  // }
+  null,
+  function rejected(err){
+    // never gets here
+  }
+);
+```
+
+1. The default fulfillment simple passes whatever value it receives along to the next step
+
+2. The `then(null, function(err){..})` patter -- only handling rejections, if any, but letting fulfillments pass through -- has a shortcut in the API `catch(function (err){..})`
+
+#### Terminology: Resolve, Fulfill and Reject
+
+Let's consider the `Promise(..)` constructor
+
+```js
+var p = new Promise( function(X,Y){
+  // X() for fulfillment
+  // Y() for rejection
+} );
+```
+`resolve()` and `reject()` is the standard
+
+Let's turn our attention to the callbacks provided to `then(..)`. A good option is `fulfilled(..)` and `rejected(..)`
+
+```js
+function fulfilled(msg) {
+  console.log( msg );
+}
+
+function rejected(err) {
+  console.error( err );
+}
+
+p.then(
+  fulfilled,
+  rejected
+);
+```
+
+### Error Handling
+
+The most natural form of error handling for most developers is the synchronous `try..catch` construct
+
+That is synchronously only, so it fails to help in async code
+
+```js
+function foo() {
+  setTimeout( function(){
+    baz.bar();
+  }, 100 );
+}
+
+try {
+  foo();
+  // later throws global error from `baz.bar()`
+}
+catch (err) {
+  // never gets here
+}
+```
+
+Consider
+
+```js
+var p = Promise.resolve( 42 );
+
+p.then(
+  function fulfilled(msg){
+    // numbers don't have string functions,
+    // so will throw an error
+    console.log( msg.toLowerCase() );
+  },
+  function rejected(err){
+    // never gets here
+  }
+);
+```
+
+1. `msg.toLowerCase()` throw an error but
+
+    - The error is for the `p` promise, which has already been fulfilled with value `42`
+
+    - The `p` promise is immutable, so the only promise that can be notified of the error is the one returned from `p.then(..)`, which we don't capture
+
+To avoid losing an error to the silence of a forgotten Promise, some say that a best practice is to place a `catch(..)` at the end of the chain
+
+```js
+var p = Promise.resolve( 42 );
+
+p.then(
+  function fulfilled(msg){
+    // numbers don't have string functions,
+    // so will throw an error
+    console.log( msg.toLowerCase() );
+  }
+)
+.catch( handleErrors );
+```
+
+1. Because we didn't pass a rejection handler to `then(..)`, the default handler was substituted, which propagates the error
+
+2. Both errors that come into `p` and error that come after `p` in its resolution will filter down to the final `handleErrors(..)`
+
+3. If `handleErrors(..)` has an error, there's still another unattended promise
+
+    - The promise that `catch(..)` returns!!! which we don't capture and don't register a rejection handler for
+
+### Promise Patterns
+
+#### Promise.all([..])
+
+Allows to do multiple Promises at a time
+
+```js
+// `request(..)` is a Promise-aware Ajax utility,
+// like we defined earlier in the chapter
+
+var p1 = request( "http://some.url.1/" );
+var p2 = request( "http://some.url.2/" );
+
+Promise.all( [p1,p2] )
+.then( function(msgs){
+  // both `p1` and `p2` fulfill and pass in
+  // their messages here
+  return request(
+    "http://some.url.3/?v=" + msgs.join(",")
+  );
+} )
+.then( function(msg){
+  console.log( msg );
+} );
+```
+
+1. `Promise.all([..])` expects a single argument, an `array` consisting generally of Promise instances
+
+2. The promise returned from `Promise.all([..])` will receive a fulfillment message that is an `array` of all the fulfillment messages from the passed in promises
+
+    - The order of the msg is the same as the order in the initial `array` of Promises
+
+3. The main promise returned from `Promise.all([..])` will only be fulfilled if and when all promises are fulfilled
+
+    - If any promise is rejected, the main promise is immediately rejected
+
+    - Always attach a rejection/error handler to every promise
+
+#### Promise.race([..])
+
+Sometimes you only want to respond to the first Promise to cross the finish line, letting the other Promises fall away
+
+`Promise.race([..])` also expects a single `array` containing one or more Promises, thenables or immediate values
+
+Will fulfill if and when any Promise resolution is a fulfillment and it will reject if and when any Promise resolution is a rejection
