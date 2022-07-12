@@ -1124,3 +1124,109 @@ Promise.resolve( foo( 42 ) )
 ```
 
 1. Another beneficial side effect of wrapping `Promise.resolve(..)` around any functions return value is that is an easy way to normalize that function call into a well-behaving async task
+
+### Chain Flow
+
+Promises are not just a mechanism for a single-step _this-then-that_ sort of operation
+
+That's the building block, but we can string multiple Promises together to represent a sequence of async steps
+
+The key to making this work is built on two behaviors intrinsic to Promises:
+
+1. Every time you call `then(..)` on a Promise, it creates and return a new Promise, which we can _chain_ with
+
+2. Whatever value you return from the `then(..)` calls fulfillment callback, is automatically set as the fulfillment of the _chained_ Promise (from the first point)
+
+```js
+var p = Promise.resolve( 21 );
+
+var p2 = p.then( function(v){
+  console.log( v );  // 21
+
+  // fulfill `p2` with value `42`
+  return v * 2;
+} );
+
+// chain off `p2`
+p2.then( function(v){
+  console.log( v );  // 42
+} );
+```
+
+1. By returning `v * 2` we fulfill the `p2` promise that the first `then(..)` call created and returned
+
+2. When `p2` `then(..)` call runs, it's receiving the fulfillment from the `return v * 2` statement
+
+    - `p2.then(..)` creates yet another promise that we could store in `p3`
+
+It;s annoying to have to create an intermediate variable `p2`, we can easily chain these together
+
+```js
+var p = Promise.resolve( 21 );
+
+p
+.then( function(v){
+  console.log( v );  // 21
+
+  // fulfill the chained promise with value `42`
+  return v * 2;
+} )
+// here's the chained promise
+.then( function(v){
+  console.log( v );  // 42
+} );
+```
+
+1. The first `then(..)` is the first step in an async sequence, and the second `then(..)` is the second step.
+
+2. What if we want step 2 to wait for step 1 to do something asynchronous?. We're using an immediate `return` statement, which immediately fulfills the chained promise
+
+The key to making a Promise sequence truly async capable at every step is to recall how `Promise.resolve(..)` operates when what you pass to it is a Promise or thenable instead of a final value
+
+`Promise.resolve(..)` directly returns a received genuine Promise, or it unwraps the value of a received thenable
+
+The same sort of unwrapping happens if you `return` a thenable or Promise from the fulfillment or rejection handler
+
+```js
+var p = Promise.resolve( 21 );
+
+p.then( function(v){
+  console.log( v );  // 21
+
+  // create a promise and return it
+  return new Promise( function(resolve,reject){
+    // fulfill with value `42`
+    resolve( v * 2 );
+  } );
+} )
+.then( function(v){
+  console.log( v );  // 42
+} );
+```
+
+1. Even when we wrapped `42` in a promise that we returned, it got unwrapped and ended up as the resolution of the chained promise
+
+2. If we introduce asynchrony to that wrapping promise, everything still nicely works the same
+
+```js
+var p = Promise.resolve( 21 );
+
+p.then( function(v){
+  console.log( v );  // 21
+
+  // create a promise to return
+  return new Promise( function(resolve,reject){
+    // introduce asynchrony!
+    setTimeout( function(){
+      // fulfill with value `42`
+      resolve( v * 2 );
+    }, 100 );
+  } );
+} )
+.then( function(v){
+  // runs after the 100ms delay in the previous step
+  console.log( v );  // 42
+} );
+```
+
+1. We can construct a sequence of however many async steps we want, and each step can delay the next step as necessary
