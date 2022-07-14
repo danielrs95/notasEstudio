@@ -1499,3 +1499,34 @@ Sometimes you only want to respond to the first Promise to cross the finish line
 `Promise.race([..])` also expects a single `array` containing one or more Promises, thenables or immediate values
 
 Will fulfill if and when any Promise resolution is a fulfillment and it will reject if and when any Promise resolution is a rejection
+
+### Promise Limitations
+
+#### Sequence Error Handling
+
+Because a Promise chain is nothing more than is constituent Promises wired together, there's no entity to refer to the entire chain as a single _thing_, there's no external way to observe any errors that may occur
+
+If you construct a Promise chain that has no error handling in it, any error anywhere in the chain will propagate indefinitely down the chain, until observed by registering a rejection handler at some step.
+
+In that specific case, having a reference to the _last_ promise in the chain is enough (`p` in the snippet)`, because you can register a rejection handler there and it will be notified of any propagated errors
+
+```js
+// `foo(..)`, `STEP2(..)` and `STEP3(..)` are
+// all promise-aware utilities
+
+var p = foo( 42 ).then( STEP2 ).then( STEP3 );
+```
+
+1. `p` here is pointing to the las promise, the one that comes from the `then(STEP3)` call
+
+2. No step is doing its own error handling. You could register a rejection error handler on `p`
+
+    `p.catch(handlerErrors)`
+
+    - If any step of the chain in fact does its own error handling, your `handleErrors` won't be notified
+
+    - The complete lack of ability to be notified of already _handled_ rejection errors is a limitation that restricts capabilities in some use cases
+
+It's basically the same limitation that exist with a `try..catch` that can catch an exception and simply swallow it
+
+#### Single Value
