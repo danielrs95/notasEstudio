@@ -1530,3 +1530,40 @@ var p = foo( 42 ).then( STEP2 ).then( STEP3 );
 It's basically the same limitation that exist with a `try..catch` that can catch an exception and simply swallow it
 
 #### Single Value
+
+Promises only have a single fulfillment value or a single rejection reason
+
+The typical advice is to construct a values wrapper to contain the multiple messages
+
+##### Splitting Values
+
+Imagine you have a utility `foo(..)` that produces two values asynchronously
+
+```js
+function getY(x) {
+  return new Promise( function(resolve,reject){
+    setTimeout( function(){
+      resolve( (3 * x) - 1 );
+    }, 100 );
+  } );
+}
+
+function foo(bar,baz) {
+  var x = bar * baz;
+
+  return getY( x )
+  .then( function(y){
+    // wrap both values into container
+    return [x,y];
+  } );
+}
+
+foo( 10, 20 ).then( function(msgs){
+  var x = msgs[0];
+  var y = msgs[1];
+
+  console.log( x, y );  // 200 599
+});
+```
+
+First lets rearrange what `foo(..)` returns so that we don't have to wrap `x` and `y` into a single `array` value to transport through one Promise.
