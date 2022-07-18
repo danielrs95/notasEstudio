@@ -1367,6 +1367,7 @@ var p = new Promise( function(X,Y){
   // Y() for rejection
 } );
 ```
+
 `resolve()` and `reject()` is the standard
 
 Let's turn our attention to the callbacks provided to `then(..)`. A good option is `fulfilled(..)` and `rejected(..)`
@@ -1567,3 +1568,350 @@ foo( 10, 20 ).then( function(msgs){
 ```
 
 First lets rearrange what `foo(..)` returns so that we don't have to wrap `x` and `y` into a single `array` value to transport through one Promise.
+
+```js
+function foo(bar,baz) {
+  var x = bar * baz;
+
+  // return both promises
+  return [
+    Promise.resolve( x ),
+    getY( x )
+  ];
+}
+
+Promise.all(
+  foo( 10, 20 )
+)
+.then( function(msgs){
+  var x = msgs[0];
+  var y = msgs[1];
+
+  console.log( x, y );
+} );
+```
+
+1. This approach more closely embraces the Promise design theory
+
+    - It's now easier in the future to refactor to split the calculation of `x` and `y` into separate functions
+
+    - It's cleaner and more flexible to let the calling code decide how to orchestrate the two promises (using `Promise.all([..])`, but not the only option) rather than to abstract such details away inside of `foo(..)`
+
+##### Unwrap/Spread Arguments
+
+The `var x = ...` and `var y = ...` assignments are still awkward overhead. We can employ some functional trickery in a helper utility
+
+```js
+function spread(fn) {
+  return Function.apply.bind( fn, null );
+}
+
+Promise.all(
+  foo( 10, 20 )
+)
+.then(
+  spread( function(x,y){
+    console.log( x, y );  // 200 599
+  } )
+)
+```
+
+Can even use inline functional magic to avoid the extra helper
+
+```js
+Promise.all(
+  foo( 10, 20 )
+)
+.then( Function.apply.bind(
+  function(x,y){
+    console.log( x, y );  // 200 599
+  },
+  null
+) );
+```
+
+With ES6 we can use destructuring
+
+```js
+Promise.all(
+  foo( 10, 20 )
+)
+.then( function(msgs){
+  var [x,y] = msgs;
+
+  console.log( x, y );  // 200 599
+} );
+```
+
+Also we can destructure parameters
+
+```js
+Promise.all(
+  foo( 10, 20 )
+)
+.then( function([x,y]){
+  console.log( x, y );  // 200 599
+} );
+```
+
+#### Single Resolution
+
+Promises can only be resolved once (fulfillment or rejection).
+
+There's a lot of async cases that fit into a different model, one that's more akin to events and/or streams of data
+
+Imagine a scenario where you might want to fire off a sequence of async steps in response to a stimulus (like an event) that can in fact happen multiple times, like a button click
+
+This probably won't work the way you want
+
+```js
+// `click(..)` binds the `"click"` event to a DOM element
+// `request(..)` is the previously defined Promise-aware Ajax
+
+var p = new Promise( function(resolve,reject){
+  click( "#mybtn", resolve );
+} );
+
+p.then( function(evt){
+  var btnID = evt.currentTarget.id;
+  return request( "http://some.url.1/?id=" + btnID );
+} )
+.then( function(text){
+  console.log( text );
+} );
+```
+
+1. The behavior only works if your application calls for the button to be clicked just one.
+
+    - If the button is clicked a second time, the `p` promise has already been resolved, so the second `resolve()` call would be ignored
+
+You probably need to invert the paradigm, creating a whole new Promise chain for each event firing
+
+```js
+click( "#mybtn", function(evt){
+  var btnID = evt.currentTarget.id;
+
+  request( "http://some.url.1/?id=" + btnID )
+  .then( function(text){
+    console.log( text );
+  } );
+} );
+```
+
+1. A whole new Promise sequence will be fired off for each `click` event on the button
+
+2. Beyond of having to define the entire Promise chain inside the event handler, this design violates the idea of separation of concerns/capabilities
+
+    - You might want to define your event handler in a different place in your code from where you define the _response_ to the event (the Promise chain)
+
+##### Inertia
+
+Promises offer a different paradigm, consider a callback-based scenario like the following
+
+```js
+function foo(x,y,cb) {
+  ajax(
+    "http://some.url.1/?x=" + x + "&y=" + y,
+    cb
+  );
+}
+
+foo( 11, 31, function(err,text) {
+  if (err) {
+    console.error( err );
+  }
+  else {
+    console.log( text );
+  }
+} );
+```
+
+1. Promises don't just magically adjust to the code, you need to make them fit with your expertise
+
+2. We need an Ajax utility that is Promise-aware instead of callback-based
+
+    - We can call it `request(..)`
+
+    - The overhead of having to manually define Promise-aware wrappers for every callback-based utility makes it less likely you'll choose to refactor to Promise-aware coding at all
+
+Imagine a helper like this
+
+```js
+// polyfill-safe guard check
+if (!Promise.wrap) {
+  Promise.wrap = function(fn) {
+    return function() {
+      var args = [].slice.call( arguments );
+
+      return new Promise( function(resolve,reject){
+        fn.apply(
+          null,
+          args.concat( function(err,v){
+            if (err) {
+              reject( err );
+            }
+            else {function foo(x,y,cb) {
+  ajax(
+    "http://some.url.1/?x=" + x + "&y=" + y,
+    cb
+  );
+}
+
+foo( 11, 31, function(err,text) {
+  if (err) {
+    console.error( err );
+  }
+  else {
+    console.log( text );
+  }
+} );
+              resolve( v );
+            }
+          } )
+        );
+      } );
+    };
+  };
+}
+```
+
+1. It takes a function that expects an error-first style callback as its last parameter, and returns a new one that automatically creates a Promise to return and substitutes the callback for you, wired up to the Promise fulfillment/rejection
+
+This is how it would be use
+
+```js
+var request = Promise.wrap(ajax)
+request("http://some.url.1/")
+.then(...)
+...
+```
+
+1. `Promise.wrap(..)` does not produce a Promise.
+
+    - Produces a function that will produce Promises.
+
+    - A Promise-producing function could be seen as a _Promise factory_ or _Promisory_
+
+2. Wrapping a callback-expecting function to be a Promise-aware function is sometimes referred to as _lifting_ or _promisifying_
+
+3. `Promise.wrap(ajax)` produces an `ajax(..)` promisory we call `request(..)`, and that promisory produces Promises for Ajax responses
+
+Back to the example, we need a promisory for both `ajax(..)` and `foo(..)`
+
+```js
+// make a promisory for `ajax(..)`
+var request = Promise.wrap( ajax );
+
+// refactor `foo(..)`, but keep it externally
+// callback-based for compatibility with other
+// parts of the code for now -- only use
+// `request(..)`'s promise internally.
+function foo(x,y,cb) {
+  request(
+    "http://some.url.1/?x=" + x + "&y=" + y
+  )
+  .then(
+    function fulfilled(text){
+      cb( null, text );
+    },
+    cb
+  );
+}
+
+// now, for this code's purposes, make a
+// promisory for `foo(..)`
+var betterFoo = Promise.wrap( foo );
+
+// and use the promisory
+betterFoo( 11, 31 )
+.then(
+  function fulfilled(text){
+    console.log( text );
+  },
+  function rejected(err){
+    console.error( err );
+  }
+);
+```
+
+1. We are refactoring `foo(..)` to use our new `request(..)` promisory
+
+2. We could just make `foo(..)` a promisory itself, instead of remaining callback-based and needing to make and use the subsequent `betterFoo(..)` promisory
+
+```js
+// `foo(..)` is now also a promisory because it
+// delegates to the `request(..)` promisory
+function foo(x,y) {
+  return request(
+    "http://some.url.1/?x=" + x + "&y=" + y
+  );
+}
+
+foo( 11, 31 )
+.then( .. )
+..
+```
+
+#### Promise Uncancelable
+
+Once you create a Promises and register a fulfillment and/or rejection handler for it, there's nothing external you can do to stop that progression
+
+Consider
+
+```js
+var p = foo( 42 );
+
+Promise.race( [
+  p,
+  timeoutPromise( 3000 )
+] )
+.then(
+  doSomething,
+  handleError
+);
+
+p.then( function(){
+  // still happens even in the timeout case :(
+} );
+```
+
+1. The timeout was external to the promise `p`, so `p` keep going, which we probably don't want
+
+One option is to invasive define your resolution callback
+
+```js
+var OK = true;
+
+var p = foo( 42 );
+
+Promise.race( [
+  p,
+  timeoutPromise( 3000 )
+  .catch( function(err){
+    OK = false;
+    throw err;
+  } )
+] )
+.then(
+  doSomething,
+  handleError
+);
+
+p.then( function(){
+  if (OK) {
+    // only happens if no timeout! :)
+  }
+} );
+```
+
+1. This is ugly, works but's it is not ideal
+
+2. _Cancellation_ is a functionality that belongs at a higher level of abstraction on top of Promises
+
+A single Promises is not really a flow-control mechanism
+
+A chain of Promises taken collectively together is a flow control expression, and thus it's appropriate for cancellation to be defined at that level of abstraction
+
+No individual Promise should be cancelable, but it's sensible for a sequence to be cancellable, because you don't pass around a sequence as a single immutable value like you do with a Promise
+
+#### Promise Performance
