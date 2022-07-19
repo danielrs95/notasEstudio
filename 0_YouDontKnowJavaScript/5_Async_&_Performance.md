@@ -1914,4 +1914,163 @@ A chain of Promises taken collectively together is a flow control expression, an
 
 No individual Promise should be cancelable, but it's sensible for a sequence to be cancellable, because you don't pass around a sequence as a single immutable value like you do with a Promise
 
-#### Promise Performance
+## Generators
+
+Chapter 2 we identifies 2 key drawbacks to expressing async flow control with callbacks
+
+1. Callback-based async doesn't fit how our brain plans out steps of a task
+2. Callbacks aren't trustable or composable because of _inversion of control_
+
+Chapter 3, detailed how Promises uninvert the _inversion of control_ of callbacks, restoring trustability/composability
+
+Now let's express async flow control in a sequential, synchronous-looking fashion.  This is possible with ES6 generators
+
+### Breaking Run-to-Completion
+
+Once a function starts executing, it runs until it completes, and no other code can interrupt and run in between
+
+ES6 introduces a new type of function that does not behave with the run-to-completion behavior. This new type of function is called a _generator_
+
+```js
+var x = 1;
+
+function foo() {
+  x++;
+  bar();        // <-- what about this line?
+  console.log( "x:", x );
+}
+
+function bar() {
+  x++;
+}
+
+foo();          // x: 3
+```
+
+1. `bar()` runs in between `x++` and `console.log(x)`. But what if `bar()` wasn't there ?
+
+    - Obviously the result would be `2` instead of `3`
+
+2. What if `bar()` wasn't present, but it could still somehow run between the `x++` and `console.log(x)`
+
+In _preemptive_ multithread languages, it would be possible for `bar()` to interrupt and run at exactly the right moment between those statements
+
+```js
+var x = 1;
+
+function *foo() {
+  x++;
+  yield; // pause!
+  console.log( "x:", x );
+}
+
+function bar() {
+  x++;
+}
+```
+
+Now, how we can run the code in that previous snippet such that `bar()` executes at the point of the `yield` inside of `*foo()`
+
+```js
+// construct an iterator `it` to control the generator
+var it = foo();
+
+// start `foo()` here!
+it.next();
+x;            // 2
+bar();
+x;            // 3
+it.next();        // x: 3
+```
+
+1. `it=foo()` does not execute the `*foo()` generator yet, but it constructs an _iterator_ that will control its execution
+
+2. The first `it.next()` starts the `*foo()` generator, and runs the `x++` on the first line of `*foo()`
+
+3. `*foo()` pauses at the `yield` statement at which point that first `it.nexT()` call finishes
+
+    - At the moment `*foo()` is stull running and active, but it is paused
+
+4. We call `bar()` which increments `x`
+
+5. The final `it.next()` call resumes the `*foo()` generator from where it was paused, and runs the `console.log(..)`
+
+Clearly `*foo()` started but did not run to completion, it paused at the `yield`. we resumed `*foo()` later, and let it finish, but that wasn't even required
+
+A generator is a special kind of function that can start and stop one or more times, and doesn't necessarily ever have to finish
+
+### Input and Output
+
+A generator function is a special function with the new processing model we just alluded to.
+
+It's still a function, still accepts arguments and still return a value
+
+```js
+function *foo(x,y) {
+  return x * y;
+}
+
+var it = foo( 6, 7 );
+
+var res = it.next();
+
+res.value;    // 42
+```
+
+1. We pass the arguments `6` and `7`, `*foo()` returns the value `42` back to the calling code
+
+2. Now we see a difference with how the generator is invoked compared to a normal function. `foo(6,7)` looks familiar
+
+    - Subtly, `*foo(..)` generator hasn't actually run yet as it would have with a function
+
+3. We are just creating an _iterator object_ which we assign to the variable `it`, to control the `*foo(..)` generator
+
+    - Then we call `it.next()`, which instructs the `*foo(...)` generator to advance from its current location, stopping either at the next `yield` or end of the generator
+
+4. The result of that `next(..)` call  is an object with a `value` property on t holding whatever value (if anything) was returned from `*foo(...)`
+
+    - In other words, `yield` caused a value to be sent out from the generator during the middle of its execution, kind of like an intermediate `return`
+
+#### Iteration Messaging
+
+In addition to generators accepting arguments and having return values, there's even more input/output messaging capability built into them, via `yield` and `next(..)`
+
+```js
+function *foo(x) {
+  var y = x * (yield);
+  return y;
+}
+
+var it = foo( 6 );
+
+// start `foo(..)`
+it.next();
+
+var res = it.next( 7 );
+
+res.value;    // 42
+```
+
+1. We pass `6` as the parameter `x`. Then we call `it.next()`, and it starts up `*foo(..)`
+
+2. Inside `*foo(..)`, the `var y = x ..` statement starts to be processed, but find `yield`
+
+    - At that point, pauses `*foo(..)` (in the middle of the assignment statement)
+
+    - Essentially request the calling code to provide a result value for the `yield` expression?
+
+    - Next, we call `it.next(7)`, which is passing `7` value back in to be that result of the paused `yield` expression
+
+3. At this point, the assignment statement is `var y = 6 * 7`.
+
+    - `return y` returns `42` as the result of the `it.next(7)` call
+
+Depending on your perspective, there's a mismatch between the `yield` and the `next(..)` call.
+
+In general, you're going to have one more `next(..)` call than you have `yield` statements
+
+1. The first `next(..)` always starts a generator, and runs to the first `yield`
+2. The second `next(..)` fulfills the first paused `yield` expression
+3. The third `next(..)` would fulfill the second `yield` and so on
+
+##### Tale of Two Questions
