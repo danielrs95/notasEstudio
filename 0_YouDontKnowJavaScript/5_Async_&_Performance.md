@@ -2074,3 +2074,308 @@ In general, you're going to have one more `next(..)` call than you have `yield` 
 3. The third `next(..)` would fulfill the second `yield` and so on
 
 ##### Tale of Two Questions
+
+Which code you're thinking about primarily will affect whether there's a mismatch or not
+
+```js
+var y = x * (yield);
+return y;
+```
+
+1. The _first_ yield is asking: "What value should I insert here?
+
+    - The _first_ `next()` already run to get the generator up to this point
+
+    - The __second__ `next(...)` call must answer posted by the __first__ `yield`
+
+    - Here's the mismatch!  second-to-first
+
+Let's flip the perspective, look at it from the iterators point of view
+
+Messages can go in both directions:
+
+1. `yield` can send out messages in response to `next(..)` calls
+2. `next(..)` can send values to a paused `yield` expression
+
+```js
+function *foo(x) {
+  var y = x * (yield "Hello");  // <-- yield a value!
+  return y;
+}
+
+var it = foo( 6 );
+
+var res = it.next();  // first `next()`, don't pass anything
+res.value;        // "Hello"
+
+res = it.next( 7 );    // pass `7` to waiting `yield`
+res.value;        // 42
+```
+
+1. We don't pass a value to the first `next()`. Only a paused `yield` could accept such a value passed by a `next(..)`
+
+2. The __first__ `next()` call is asking: What next value does `*foo(..)` has to give me
+
+    - The answer is made by the __first__ `yield "hello"`
+
+    - There's still an extra `next()`
+
+    - The final `it.next(7)` is asking again what next value the generator will produce. There's no more `yield`, so the `return` answer the question
+
+#### Generator'ing Values
+
+#### Producers and Iterators
+
+Imagine you're producing a series of values where each value has a definable relationship to the previous value
+
+To do this, you'r going to need a stateful producer that remembers the las value it gave out
+
+You can implement something like that using a function closure
+
+```js
+var gimmeSomething = (function(){
+  var nextVal;
+
+  return function(){
+    if (nextVal === undefined) {
+      nextVal = 1;
+    }
+    else {
+      nextVal = (3 * nextVal) + 6;
+    }
+
+    return nextVal;
+  };
+})();
+
+gimmeSomething();    // 1
+gimmeSomething();    // 9
+gimmeSomething();    // 33
+gimmeSomething();    // 105
+```
+
+This task is a very common design pattern, usually solved by iterators
+
+An iterator is a well-defined interface for stepping through a series of values from a producer. The JS interface for iterators, is to call `next()` each time you want the next value from the producer
+
+We could implement the standard iterator interface for our number series producer:
+
+```js
+var something = (function(){
+  var nextVal;
+
+  return {
+    // needed for `for..of` loops
+    [Symbol.iterator]: function(){ return this; },
+
+    // standard iterator interface method
+    next: function(){
+      if (nextVal === undefined) {
+        nextVal = 1;
+      }
+      else {
+        nextVal = (3 * nextVal) + 6;
+      }
+
+      return { done:false, value:nextVal };
+    }
+  };
+})();
+
+something.next().value;    // 1
+something.next().value;    // 9
+something.next().value;    // 33
+something.next().value;    // 105
+```
+
+1. `[..]` syntax is called __computed property name__, is a ES6 feature. It's a way in an object literal definition to specify an expression and use the result of that expression as the name for the property
+
+2. `Symbol.iterator` is one of ES6 predefined special `Symbol` values
+
+3. `next()` call returns an object with two properties: `done` is a `boolean` signaling the iterators complete status. `value` holds the iteration value
+
+ES6 adds `for...of` loop, a standard iterator can automatically be consumed with native loop syntax
+
+```js
+for (var v of something) {
+  console.log( v );
+
+  // don't let the loop run forever!
+  if (v > 500) {
+    break;
+  }
+}
+// 1 9 33 105 321 969
+```
+
+1. `for...of` automatically calls `next()` for each iteration, it does not pass any values to the `next()` and will terminate on receiving a `done:true`
+
+You could manually loop over iterators, calling `next()` and checking `done:true`
+
+```js
+for (
+  var ret;
+  (ret = something.next()) && !ret.done;
+) {
+  console.log( ret.value );
+
+  // don't let the loop run forever!
+  if (ret.value > 500) {
+    break;
+  }
+}
+// 1 9 33 105 321 969
+```
+
+1. This approach is uglier, but let's you pass values to the `next(...)` if necessary
+
+2. Regular `objects` do not come with a default iterator the way `arrays` do.
+
+    - If you want to iterate over the properties of an object (with no particular guarantee of ordering). `Object.keys(..)` returns an `array`
+
+    - `for ( var k of Object.keys(obj)) {....` will loop over an objects keys
+
+    - Similar to a `for...in` loop, but `Object.keys(..)` does not include properties from the `[[Prototype]]` chain
+
+##### Iterables
+
+The `something` object in our example is called an _iterator_, as it has the `nexT()` method on its interface
+
+Other term is _iterable_, which is an _object_ that _contains_ an _iterator_ that can iterate over its values
+
+As of ES6, the way to retrieve an _iterator (the method next)_ from an _iterable (the object)_ is that:
+
+1. The _iterable (object)_ must have a function on it, with the name being the special ES6 symbol value `Symbol.iterator`
+
+2. When this function is called, it returns an _iterator (next())_. Generally each call should return a fresh new _iterator_
+
+```js
+[Symbol.iterator]: function(){ return this; }
+```
+
+1. That code is making the `something` value -- the interface of the `something` iterator -- ALSO an _iterable_. Then we pass `something` to the `for..of` loop
+
+```js
+for (var v of something) {
+  ..
+}
+```
+
+1. `for..of` expects `something` to be an __iterable__. It looks for and calls its `Symbol.iterator` function.
+2. That function simple `return this`, so it just gives itself back
+
+##### Generator Iterator
+
+A generator can be treated as a producer of values that we extract one at a time through an _iterator_ interfaces `next()` calls
+
+A generator is not technically an _iterable_, but very similar, when you execute the generator, you get an _iterator_ back
+
+```js
+function *foo(){ .. }
+
+var it = foo();
+```
+
+We can implement the `something` example like this
+
+```js
+function *something() {
+  var nextVal;
+
+  while (true) {
+    if (nextVal === undefined) {
+      nextVal = 1;
+    }
+    else {
+      nextVal = (3 * nextVal) + 6;
+    }
+
+    yield nextVal;
+  }
+}
+```
+
+1. `while...true` is OK if it has a `yield`, as the generator will pause at each iteration.
+
+2. Because the generator pauses at each `yield` the state (scope) of the function `*something()` is kept around. Meaning there's no need for the closure boilerplate to preserve variable state across calls
+
+We can use our the new `*something()` generator with a `for...of` loop
+
+```js
+for (var v of something()) {
+  console.log( v );
+
+  // don't let the loop run forever!
+  if (v > 500) {
+    break;
+  }
+}
+// 1 9 33 105 321 969
+```
+
+1. We called `*something()` to get its _iterator_ for the `for..of`
+
+2. We could not say `for (var v of something)...` because `something` here is a generator which is not an __iterable__
+
+    - We have to call `something()` to construct a producer for the `for...of` loop to iterate over
+
+3. The `something()` call produces an __iterator__ but the `for..of` wants an __iterable (object)__
+
+    - The generators __iterator__ also has a `Symbol.iterator` function on it, which basically does a `return this`
+
+    - In other words, a generators __iterator__ is also an __iterable__
+
+###### Stopping the Generator
+
+Abnormal completion (early termination) of the `for..of` loop, generally caused by a `break`, `return` or an uncaught exception sends a signal to the generators _iterator_ for it to terminate
+
+`for..of` will automatically sends this signal, you can send manually to an _iterator_ by calling `return(..)`
+
+If you specify a `try...finally` clause inside the generator, it will always be run even when the generator is externally completed. Useful to clean up resources like database connections
+
+```js
+function *something() {
+  try {
+    var nextVal;
+
+    while (true) {
+      if (nextVal === undefined) {
+        nextVal = 1;
+      }
+      else {
+        nextVal = (3 * nextVal) + 6;
+      }
+
+      yield nextVal;
+    }
+  }
+  // cleanup clause
+  finally {
+    console.log( "cleaning up!" );
+  }
+}
+```
+
+```js
+var it = something();
+for (var v of it) {
+  console.log( v );
+
+  // don't let the loop run forever!
+  if (v > 500) {
+    console.log(
+      // complete the generator's iterator
+      it.return( "Hello World" ).value
+    );
+    // no `break` needed here
+  }
+}
+// 1 9 33 105 321 969
+// cleaning up!
+// Hello World
+```
+
+1. `it.return(..)` immediately terminates the generator, which runs the `finally` clause
+
+    - Sets the returned `value` to whatever you passed in to `return(...)`
+    - No need to include `break` because the generator _iterator_ is set to `done:true` so the `for..of` will terminate on its next iteration
